@@ -38,7 +38,7 @@ function GekiSphere() {
         />
       </mesh>
 
-      {/* Subtle inner depth */}
+      {/* ───────── SUBTLE INNER DEPTH ───────── */}
 
       <mesh scale={0.96}>
         <sphereGeometry args={[1.55, 32, 24]} />
@@ -57,26 +57,9 @@ function GekiSphere() {
   )
 }
 
-
 /* ─────────────────────────────────────────────
    CURVED SPHERE PATCH
 ───────────────────────────────────────────── */
-
-/*
-  This is the important part.
-
-  Instead of putting a flat rectangle in front
-  of the sphere, every vertex is projected onto
-  the sphere surface.
-
-  Think:
-
-          flat logo
-             ↓
-       x² + y² + z² = r²
-             ↓
-       curved football panel
-*/
 
 function SpherePatch({
   x,
@@ -86,6 +69,7 @@ function SpherePatch({
   radius = 1.55,
   segmentsX = 10,
   segmentsY = 5,
+  curve = 0,
 }: {
   x: number
   y: number
@@ -94,6 +78,7 @@ function SpherePatch({
   radius?: number
   segmentsX?: number
   segmentsY?: number
+  curve?: number
 }) {
   const geometry = useMemo(() => {
     const positions: number[] = []
@@ -112,19 +97,50 @@ function SpherePatch({
     for (let iy = 0; iy <= segmentsY; iy++) {
       const v = iy / segmentsY
 
-      const localY =
-        y + (v - 0.5) * height
-
       for (let ix = 0; ix <= segmentsX; ix++) {
         const u = ix / segmentsX
+
+        /*
+          X position across the patch
+        */
 
         const localX =
           x + (u - 0.5) * width
 
         /*
-          Calculate the FRONT surface of sphere.
+          ─────────────────────────────
+          CURVE THE WHITE LINE
+          ─────────────────────────────
 
-          z = sqrt(r² - x² - y²)
+          normalizedX:
+            -1 = left
+             0 = center
+             1 = right
+
+          The center gets the maximum
+          upward curve while the edges
+          remain at their original height.
+        */
+
+        const normalizedX =
+          u * 2 - 1
+
+        const curveOffset =
+          curve *
+          (1 - normalizedX * normalizedX)
+
+        const localY =
+          y +
+          (v - 0.5) * height +
+          curveOffset
+
+        /*
+          ─────────────────────────────
+          PROJECT FRONT SURFACE
+          ONTO SPHERE
+          ─────────────────────────────
+
+          x² + y² + z² = r²
         */
 
         const distanceSquared =
@@ -133,11 +149,13 @@ function SpherePatch({
 
         const safeZ = Math.max(
           0.001,
-          radius * radius - distanceSquared
+          radius * radius -
+            distanceSquared
         )
 
         const localZ =
-          Math.sqrt(safeZ) + surfaceOffset
+          Math.sqrt(safeZ) +
+          surfaceOffset
 
         positions.push(
           localX,
@@ -150,7 +168,9 @@ function SpherePatch({
     }
 
     /*
-      Connect the curved vertices into triangles.
+      ─────────────────────────────
+      CONNECT VERTICES
+      ─────────────────────────────
     */
 
     for (let iy = 0; iy < segmentsY; iy++) {
@@ -177,7 +197,14 @@ function SpherePatch({
       }
     }
 
-    const geo = new THREE.BufferGeometry()
+    /*
+      ─────────────────────────────
+      CREATE GEOMETRY
+      ─────────────────────────────
+    */
+
+    const geo =
+      new THREE.BufferGeometry()
 
     geo.setAttribute(
       'position',
@@ -198,7 +225,9 @@ function SpherePatch({
     geo.setIndex(indices)
 
     /*
-      Give the curved surface a proper normal.
+      Calculate proper normals so
+      the white surface receives
+      lighting naturally.
     */
 
     geo.computeVertexNormals()
@@ -212,6 +241,7 @@ function SpherePatch({
     radius,
     segmentsX,
     segmentsY,
+    curve,
   ])
 
   return (
@@ -226,35 +256,28 @@ function SpherePatch({
   )
 }
 
-
 /* ─────────────────────────────────────────────
    GEKI SURFACE MARK
 ───────────────────────────────────────────── */
 
 function GekiSurface() {
-  /*
-    Everything here is attached to the same
-    spherical surface.
-
-    Coordinates are X/Y positions on the sphere.
-  */
-
   return (
     <group>
-
       {/* ═══════════════════════════════════════
           TOP TORII BEAM
+          
+          CURVED UPWARD IN THE CENTER
       ═══════════════════════════════════════ */}
 
       <SpherePatch
         x={0}
-        y={0.64}
+        y={0.60}
         width={1.85}
         height={0.16}
-        segmentsX={14}
-        segmentsY={4}
+        segmentsX={20}
+        segmentsY={5}
+        curve={0.14}
       />
-
 
       {/* ═══════════════════════════════════════
           LEFT ROOF EXTENSION
@@ -269,7 +292,6 @@ function GekiSurface() {
         segmentsY={4}
       />
 
-
       {/* ═══════════════════════════════════════
           RIGHT ROOF EXTENSION
       ═══════════════════════════════════════ */}
@@ -282,7 +304,6 @@ function GekiSurface() {
         segmentsX={6}
         segmentsY={4}
       />
-
 
       {/* ═══════════════════════════════════════
           SECOND TORII BEAM
@@ -297,7 +318,6 @@ function GekiSurface() {
         segmentsY={4}
       />
 
-
       {/* ═══════════════════════════════════════
           LEFT PILLAR
       ═══════════════════════════════════════ */}
@@ -311,7 +331,6 @@ function GekiSurface() {
         segmentsY={12}
       />
 
-
       {/* ═══════════════════════════════════════
           RIGHT PILLAR
       ═══════════════════════════════════════ */}
@@ -324,12 +343,9 @@ function GekiSurface() {
         segmentsX={4}
         segmentsY={12}
       />
-
-
     </group>
   )
 }
-
 
 /* ─────────────────────────────────────────────
    LIGHT ORBITS
@@ -349,11 +365,22 @@ function ScienceOrbit() {
       ref={ref}
       position={[1.45, 0, 0]}
     >
-      {/* Main orbit */}
+      {/* ───────── MAIN ORBIT ───────── */}
 
-      <mesh rotation={[Math.PI / 2.3, 0.15, 0]}>
+      <mesh
+        rotation={[
+          Math.PI / 2.3,
+          0.15,
+          0,
+        ]}
+      >
         <torusGeometry
-          args={[2.05, 0.012, 8, 64]}
+          args={[
+            2.05,
+            0.012,
+            8,
+            64,
+          ]}
         />
 
         <meshBasicMaterial
@@ -363,11 +390,22 @@ function ScienceOrbit() {
         />
       </mesh>
 
-      {/* Secondary orbit */}
+      {/* ───────── SECONDARY ORBIT ───────── */}
 
-      <mesh rotation={[1.15, -0.5, 0]}>
+      <mesh
+        rotation={[
+          1.15,
+          -0.5,
+          0,
+        ]}
+      >
         <torusGeometry
-          args={[2.3, 0.009, 8, 64]}
+          args={[
+            2.3,
+            0.009,
+            8,
+            64,
+          ]}
         />
 
         <meshBasicMaterial
@@ -377,47 +415,71 @@ function ScienceOrbit() {
         />
       </mesh>
 
-      {/* Data nodes */}
+      {/* ───────── DATA NODES ───────── */}
 
       <mesh position={[2, 0, 0]}>
-        <sphereGeometry args={[0.035, 8, 8]} />
+        <sphereGeometry
+          args={[0.035, 8, 8]}
+        />
 
-        <meshBasicMaterial color="#e30613" />
+        <meshBasicMaterial
+          color="#e30613"
+        />
       </mesh>
 
-      <mesh position={[-1.7, 0.45, 0]}>
-        <sphereGeometry args={[0.025, 8, 8]} />
+      <mesh
+        position={[
+          -1.7,
+          0.45,
+          0,
+        ]}
+      >
+        <sphereGeometry
+          args={[0.025, 8, 8]}
+        />
 
-        <meshBasicMaterial color="#e30613" />
+        <meshBasicMaterial
+          color="#e30613"
+        />
       </mesh>
     </group>
   )
 }
-
 
 /* ─────────────────────────────────────────────
    LOW GPU PARTICLES
 ───────────────────────────────────────────── */
 
 function ScienceParticles() {
-  const pointsRef = useRef<THREE.Points>(null)
+  const pointsRef =
+    useRef<THREE.Points>(null)
 
   const particles = useMemo(() => {
     const count = 45
-    const positions = new Float32Array(count * 3)
+
+    const positions =
+      new Float32Array(count * 3)
 
     for (let i = 0; i < count; i++) {
-      const radius = 2.8 + Math.random() * 1.8
-      const angle = Math.random() * Math.PI * 2
+      const radius =
+        2.8 + Math.random() * 1.8
+
+      const angle =
+        Math.random() *
+        Math.PI *
+        2
 
       positions[i * 3] =
-        Math.cos(angle) * radius
+        Math.cos(angle) *
+        radius
 
       positions[i * 3 + 1] =
-        (Math.random() - 0.5) * 3.5
+        (Math.random() - 0.5) *
+        3.5
 
       positions[i * 3 + 2] =
-        Math.sin(angle) * radius
+        Math.sin(angle) *
+        radius
     }
 
     return positions
@@ -426,7 +488,8 @@ function ScienceParticles() {
   useFrame((_, delta) => {
     if (!pointsRef.current) return
 
-    pointsRef.current.rotation.y += delta * 0.008
+    pointsRef.current.rotation.y +=
+      delta * 0.008
   })
 
   return (
@@ -449,7 +512,6 @@ function ScienceParticles() {
   )
 }
 
-
 /* ─────────────────────────────────────────────
    SCENE
 ───────────────────────────────────────────── */
@@ -457,7 +519,11 @@ function ScienceParticles() {
 function Scene() {
   return (
     <>
-      <ambientLight intensity={1.8} />
+      {/* ───────── LIGHTING ───────── */}
+
+      <ambientLight
+        intensity={1.8}
+      />
 
       <directionalLight
         position={[3, 4, 5]}
@@ -471,6 +537,8 @@ function Scene() {
         color="#e30613"
       />
 
+      {/* ───────── FLOATING GEKI SPHERE ───────── */}
+
       <Float
         speed={0.55}
         rotationIntensity={0.04}
@@ -479,13 +547,16 @@ function Scene() {
         <GekiSphere />
       </Float>
 
+      {/* ───────── ORBITS ───────── */}
+
       <ScienceOrbit />
+
+      {/* ───────── PARTICLES ───────── */}
 
       <ScienceParticles />
     </>
   )
 }
-
 
 /* ─────────────────────────────────────────────
    HERO
@@ -503,7 +574,8 @@ export default function ThreeHero() {
         gl={{
           antialias: true,
           alpha: true,
-          powerPreference: 'high-performance',
+          powerPreference:
+            'high-performance',
         }}
       >
         <Scene />
@@ -511,4 +583,3 @@ export default function ThreeHero() {
     </div>
   )
 }
-
