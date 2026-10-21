@@ -38,7 +38,12 @@ export function DashboardPage({
   const { data, error, loading } = useData<Dashboard>(
     account ? "/me/dashboard" : null,
   );
-  const { data: courses } = useData<Course[]>("/catalog");
+  const { data: allCourses } = useData<Course[]>("/catalog");
+  const courses = allCourses?.filter(
+    (c) =>
+      account?.role !== "STUDENT" ||
+      account?.purchases.some((p) => p.courseId === c.id && !p.revokedAt),
+  );
   if (loading) return <Loading />;
   if (error) return <Message error>{error}</Message>;
   const latest = data?.progress[0];
@@ -141,19 +146,23 @@ export function DashboardPage({
         </div>
         <aside className="side-info">
           <div className="panel stack">
-            <Badge tone={account?.membership ? "green" : "amber"}>
-              {account?.membership
-                ? "Active membership"
-                : "Membership required"}
+            <Badge
+              tone={
+                account?.purchases.some((p) => !p.revokedAt) ? "green" : "amber"
+              }
+            >
+              {account?.purchases.some((p) => !p.revokedAt)
+                ? "Courses purchased"
+                : "Explore course packages"}
             </Badge>
             <h3>
-              {account?.membership
+              {account?.purchases.some((p) => !p.revokedAt)
                 ? "Your academy is open."
                 : "Your next chapter."}
             </h3>
-            <p>All available courses are included with membership.</p>
-            <Button href="/membership" secondary>
-              Manage membership
+            <p>Each course is purchased separately with ongoing access.</p>
+            <Button href="/purchases" secondary>
+              My purchased courses
             </Button>
           </div>
           <div className="panel stack">
@@ -292,7 +301,14 @@ export function LessonPage({
     setFailure("");
     try {
       let data: Playback;
-      if (account?.membership && !publicPreview) {
+      if (
+        account &&
+        (account.role !== "STUDENT" ||
+          account.purchases.some(
+            (p) => p.courseId === lesson?.courseId && !p.revokedAt,
+          )) &&
+        !publicPreview
+      ) {
         await api("/me/devices", {
           method: "POST",
           body: json({
@@ -309,7 +325,7 @@ export function LessonPage({
       } else {
         if (!lesson?.preview)
           throw new Error(
-            "An active membership is required. Your progress remains saved.",
+            "Purchase this course to unlock its lessons. Your progress remains saved.",
           );
         data = await api<Playback>("/lessons/" + selected + "/preview");
       }
@@ -432,8 +448,8 @@ export function LessonPage({
                 <Button href="/devices" secondary>
                   Manage devices
                 </Button>
-                <Button href="/membership" secondary>
-                  Membership
+                <Button href="/purchases" secondary>
+                  My Courses
                 </Button>
               </div>
             </div>
@@ -475,7 +491,9 @@ export function LessonPage({
           <div className="aside-head">
             <div className="eyebrow">YOUR COURSE</div>
             <h3>{currentCourse?.title}</h3>
-            <p style={{ fontSize: 12 }}>All lessons open to active members.</p>
+            <p style={{ fontSize: 12 }}>
+              All lessons open after purchasing this course.
+            </p>
           </div>
           {currentCourse?.sections.map((s) => (
             <details key={s.id} open>
@@ -549,7 +567,9 @@ export function QuizPage({ quizId }: { quizId: string }) {
   if (loading) return <Loading />;
   if (error) return <Message error>{error}</Message>;
   if (!data)
-    return <Message>Sign in with active membership to open this quiz.</Message>;
+    return (
+      <Message>Purchase this course and sign in to open its quiz.</Message>
+    );
   if (attempt)
     return (
       <div className="quiz-wrap">
@@ -678,7 +698,7 @@ export function AccountPage({ route }: { route: string }) {
         <Heading
           eyebrow="NOTIFICATIONS"
           title="The updates that matter."
-          description="Your account, membership and learning access."
+          description="Your account, purchases and learning access."
         />
         <div className="table-wrap">
           {data?.notifications.length ? (
@@ -718,59 +738,34 @@ export function AccountPage({ route }: { route: string }) {
         </div>
       </>
     );
-  if (route === "/membership")
+  if (route === "/purchases" || route === "/membership")
     return (
       <>
-        <Heading eyebrow="MEMBERSHIP" title="Your access to the academy." />
-        <div className="settings-grid">
-          <div className="panel stack">
-            <Badge tone={account?.membership ? "green" : "amber"}>
-              {account?.membership ? "Active" : "No active membership"}
-            </Badge>
-            <h3>{account?.membership?.plan || "Choose your next chapter."}</h3>
-            {account?.membership ? (
-              <p>Access until {when(account.membership.endsAt)}</p>
-            ) : (
-              <p>Your progress and quiz results remain saved.</p>
-            )}
-            <Button href="/pricing">Membership options</Button>
-            <Message>
-              Payment prices and local provider remain undecided. No automatic
-              renewal is enabled.
-            </Message>
-          </div>
-          <div className="panel stack">
-            <h3>Membership history</h3>
-            {data?.memberships.length ? (
-              data.memberships.map((m) => (
-                <div className="stack sm" key={m.id}>
-                  <span>{m.plan}</span>
-                  <small>
-                    {when(m.startsAt)} → {when(m.endsAt)}{" "}
-                    {m.revokedAt ? "· Revoked" : ""}
-                  </small>
-                </div>
-              ))
-            ) : (
-              <p>No membership records yet.</p>
-            )}
-          </div>
+        <Heading
+          eyebrow="MY COURSES"
+          title="Your purchased course packages."
+          description="One-time purchases. Ongoing access to each course you own."
+        />
+        <div className="grid-3">
+          {data?.purchases.map((p) => (
+            <div className="panel stack" key={p.id}>
+              <Badge tone={p.revokedAt ? "red" : "green"}>
+                {p.revokedAt ? "Access revoked" : "Purchased"}
+              </Badge>
+              <h3>{p.course.title}</h3>
+              <p>Purchased {when(p.purchasedAt)}</p>
+              <small>{p.paymentReference}</small>
+              {!p.revokedAt ? (
+                <Button href={"/courses/" + p.course.slug}>Open course</Button>
+              ) : null}
+            </div>
+          ))}
         </div>
-        <div className="block-head">
-          <h3>Payment history</h3>
-        </div>
-        {data?.payments.length ? (
-          <div className="panel stack">
-            {data.payments.map((p) => (
-              <div key={p.id} className="row between">
-                <span>{p.providerReference}</span>
-                <Badge>{p.status}</Badge>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <Empty title="No transactions yet." />
-        )}
+        {!data?.purchases.length ? (
+          <Empty title="No course purchases yet.">
+            <Button href="/library">Explore courses</Button>
+          </Empty>
+        ) : null}
       </>
     );
   return (
@@ -839,7 +834,7 @@ export function AccountPage({ route }: { route: string }) {
           <div className="panel stack">
             <h3>Account notifications</h3>
             <p>
-              Essential verification, recovery and membership messages are
+              Essential verification, recovery and purchase messages are
               retained.
             </p>
             <small>

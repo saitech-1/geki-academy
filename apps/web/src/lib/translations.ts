@@ -1,6 +1,9 @@
 import type { Language } from "@geki/contracts";
 // Burmese copy should receive native-speaker editorial review before launch.
 const myanmar: Record<string, string> = {
+  "My Courses": "ကျွန်ုပ်၏ သင်တန်းများ",
+  "Course Packages": "သင်တန်းများ",
+  "Buy this course": "ဤသင်တန်းကို ဝယ်ယူရန်",
   Home: "ပင်မစာမျက်နှာ",
   Courses: "သင်တန်းများ",
   "About GEKI": "GEKI အကြောင်း",

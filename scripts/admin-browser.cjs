@@ -8,14 +8,18 @@ const { chromium } = require("playwright");
   });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("http://127.0.0.1:3000/signin");
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "/signin",
+  );
   await page.getByText("Local test sign-in", { exact: true }).waitFor();
   await page.getByRole("link", { name: /Use real Firebase sign-in/ }).waitFor();
   await page.getByLabel("Account / guardian email").fill("admin@geki.local");
   await page.locator("input[name=password]").fill("GekiLocal!2026");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL("**/dashboard");
-  await page.goto("http://127.0.0.1:3000/admin/courses");
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "/admin/courses",
+  );
   await page
     .getByRole("button", { name: "Create course", exact: true })
     .click();
@@ -58,7 +62,9 @@ const { chromium } = require("playwright");
     await page.getByLabel("English title", { exact: true }).inputValue(),
     name + " edited",
   );
-  await page.goto("http://127.0.0.1:3000/admin/videos");
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "/admin/videos",
+  );
   await page.getByRole("button", { name: "Add video", exact: true }).click();
   await centered();
   await page
@@ -94,14 +100,12 @@ const { chromium } = require("playwright");
     .click();
   await page.getByText("Video details saved.", { exact: true }).waitFor();
   await page.screenshot({ path: ".local/admin-video-editor-laptop.png" });
-  const english = page
-    .locator("dialog form")
-    .filter({
-      has: page.getByRole("heading", {
-        name: "English subtitles",
-        exact: true,
-      }),
-    });
+  const english = page.locator("dialog form").filter({
+    has: page.getByRole("heading", {
+      name: "English subtitles",
+      exact: true,
+    }),
+  });
   await english.locator("input[type=checkbox]").check();
   await english
     .getByRole("button", { name: "Save track", exact: true })
@@ -139,7 +143,9 @@ const { chromium } = require("playwright");
     .fill("Remove browser verification fixture");
   await page.getByRole("button", { name: "Delete video", exact: true }).click();
   await page.locator("dialog[open]").waitFor({ state: "hidden" });
-  await page.goto("http://127.0.0.1:3000/admin/courses");
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "/admin/courses",
+  );
   await page.getByLabel("Search admin courses").fill(name);
   const row = page.getByRole("row").filter({ hasText: name + " edited" });
   await row.getByRole("button", { name: "Delete", exact: true }).click();
@@ -150,7 +156,9 @@ const { chromium } = require("playwright");
     .getByRole("button", { name: "Delete course", exact: true })
     .click();
   await page.locator("dialog[open]").waitFor({ state: "hidden" });
-  await page.goto("http://127.0.0.1:3000/admin");
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "/admin",
+  );
   await page
     .getByRole("heading", { name: "Keep the academy moving." })
     .waitFor();

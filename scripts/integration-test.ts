@@ -89,6 +89,8 @@ checks.push(
 const course = (
   await call("/admin/courses", admin, "POST", {
     title: "Local playback verification · Not GEKI teaching",
+    priceMinor: 500000,
+    currency: "MMK",
     description:
       "Development fixture generated for end-to-end verification. Replace with approved GEKI teaching content before launch.",
   })
@@ -178,16 +180,119 @@ assert.equal(
   (await call("/me/playback/" + lesson.id, student, "POST", {}, key)).status,
   403,
 );
-checks.push("membership enforced before playback");
+checks.push("course purchase enforced before playback");
+await db.membership.create({
+  data: {
+    userId: me.id,
+    plan: "ANNUAL",
+    startsAt: new Date(),
+    endsAt: new Date(Date.now() + 86400000),
+  },
+});
+assert.equal(
+  (await call("/me/playback/" + lesson.id, student, "POST", {}, key)).status,
+  403,
+);
+const courseB = await db.course.create({
+  data: {
+    title: "Course B isolation fixture",
+    slug: "isolation-" + Date.now(),
+    description: "Separate course fixture",
+    status: "PUBLISHED",
+    priceMinor: 750000,
+    sections: {
+      create: {
+        title: "Section B",
+        position: 0,
+        lessons: {
+          create: { title: "Lesson B", position: 0, videoId: video.id },
+        },
+      },
+    },
+    quiz: { create: { published: true } },
+  },
+  include: { sections: { include: { lessons: true } }, quiz: true },
+});
 assert.equal(
   (
     await call("/admin/students/" + me.id + "/action", admin, "POST", {
       action: "GRANT",
-      plan: "MONTHLY",
-      reason: "Local membership verification grant",
+      courseId: course.id,
+      reason: "Missing payment reference check",
+    })
+  ).status,
+  400,
+);
+assert.equal(
+  (await call("/checkout", student, "POST", { courseId: course.id })).status,
+  503,
+);
+
+assert.equal(
+  (
+    await call("/admin/students/" + me.id + "/action", admin, "POST", {
+      action: "GRANT",
+      courseId: course.id,
+      paymentReference: "local-course-" + me.id,
+      reason: "Local confirmed course payment",
     })
   ).status,
   200,
+);
+
+assert.equal(
+  (
+    await call(
+      "/me/playback/" + courseB.sections[0]!.lessons[0]!.id,
+      student,
+      "POST",
+      {},
+      key,
+    )
+  ).status,
+  403,
+);
+assert.equal(
+  (await call("/me/quizzes/" + courseB.quiz!.id, student)).status,
+  403,
+);
+assert.equal(
+  (await call("/checkout", student, "POST", { courseId: course.id })).status,
+  409,
+);
+assert.equal(
+  (
+    await call("/admin/students/" + me.id + "/action", admin, "POST", {
+      action: "GRANT",
+      courseId: course.id,
+      paymentReference: "local-course-" + me.id,
+      reason: "Idempotent purchase confirmation",
+    })
+  ).status,
+  200,
+);
+assert.equal(await db.coursePurchase.count({ where: { userId: me.id } }), 1);
+assert.equal(
+  (
+    await call("/admin/students/" + me.id + "/action", admin, "POST", {
+      action: "GRANT",
+      courseId: courseB.id,
+      paymentReference: "local-course-" + me.id,
+      reason: "Prevent reused payment reference",
+    })
+  ).status,
+  409,
+);
+assert.equal(
+  (
+    await call("/admin/courses/" + course.id, admin, "DELETE", {
+      reason: "Preserve purchased course records",
+    })
+  ).status,
+  409,
+);
+checks.push(
+  "legacy membership cannot unlock courses; purchases isolate reused videos and quizzes; payment references are required, unique and idempotent; purchase history prevents deletion",
 );
 const keys = [key, randomUUID() + randomUUID(), randomUUID() + randomUUID()];
 const results = await Promise.all(
@@ -300,9 +405,9 @@ assert.equal(attempt.data.passed, true);
 checks.push(
   "answers stay server-side; grading and attempt history are persisted",
 );
-await db.membership.updateMany({
+await db.coursePurchase.updateMany({
   where: { userId: me.id },
-  data: { endsAt: new Date(Date.now() - 1000) },
+  data: { revokedAt: new Date() },
 });
 assert.equal(
   (await call("/me/playback/" + lesson.id, student, "POST", {}, valid)).status,
@@ -313,7 +418,7 @@ const saved = (await call("/me/dashboard", student)).data;
 assert.equal(saved.attempts.length, 1);
 assert.ok(saved.progress.length);
 checks.push(
-  "expiry revokes media access while retaining progress and quiz results",
+  "revocation stops media access while retaining progress and quiz results",
 );
 const devices = (await call("/me/devices", student)).data.devices;
 for (const d of devices)

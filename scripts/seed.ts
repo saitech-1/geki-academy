@@ -36,19 +36,6 @@ for (const [email, name, role] of [
     },
     update: {},
   });
-  if (
-    role === "STUDENT" &&
-    !(await db.membership.findFirst({ where: { userId: user.id } }))
-  )
-    await db.membership.create({
-      data: {
-        userId: user.id,
-        plan: "MONTHLY",
-        source: "LOCAL_SEED",
-        startsAt: new Date(),
-        endsAt: new Date(Date.now() + 30 * 86400000),
-      },
-    });
 }
 const course = await db.course.upsert({
   where: { slug: "geki-kihon-package" },

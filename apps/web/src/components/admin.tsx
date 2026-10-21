@@ -47,7 +47,7 @@ export function AdminOverview() {
   const { account } = useAuth();
   const { data, error, loading } = useData<{
     students: number;
-    activeMemberships: number;
+    activePurchasers: number;
     videos: number;
     courses: number;
     queue: number;
@@ -75,7 +75,7 @@ export function AdminOverview() {
           <div className="grid-4">
             {[
               ["Registered learners", data.students],
-              ["Active memberships", data.activeMemberships],
+              ["Learners with purchases", data.activePurchasers],
               ["Published courses", data.courses],
               ["Video records", data.videos],
             ].map(([label, value]) => (
@@ -97,7 +97,7 @@ export function AdminOverview() {
               <h3>Service configuration</h3>
               <p>Media mode: {data.mediaMode}</p>
               <Message>
-                Payments are not configured. Membership grants are explicit,
+                Payments are not configured. Course purchases are verified,
                 audited admin actions.
               </Message>
             </div>
@@ -318,12 +318,37 @@ export function CourseEditor({ courseId }: { courseId: string }) {
                   instructor: f.get("instructor"),
                   category: f.get("category"),
                   thumbnail: f.get("thumbnail"),
+                  priceMinor: f.get("price")
+                    ? Math.round(Number(f.get("price")) * 100)
+                    : null,
+                  currency: f.get("currency"),
                 },
                 "PATCH",
               );
             }}
           >
             <h3>Course details</h3>
+            <label>
+              Course price
+              <input
+                name="price"
+                type="number"
+                min="0.01"
+                step="0.01"
+                defaultValue={c.priceMinor ? c.priceMinor / 100 : ""}
+              />
+            </label>
+            <label>
+              Currency
+              <select name="currency" defaultValue={c.currency}>
+                <option>MMK</option>
+                <option>USD</option>
+              </select>
+            </label>
+            <small>
+              One-time purchase with ongoing course access. Leave price blank
+              until approved.
+            </small>
             <label>
               English title
               <input name="title" defaultValue={c.title} required />
@@ -1333,7 +1358,10 @@ export function AdminStudents() {
   );
   const [target, setTarget] = useState<Student | null>(null);
   const [action, setAction] = useState("GRANT");
-  const [plan, setPlan] = useState("MONTHLY");
+  const [courseId, setCourseId] = useState("");
+  const { data: courseOptions } = useData<Course[]>(
+    account && account.role !== "STUDENT" ? "/admin/courses" : null,
+  );
   const [role, setRole] = useState("STUDENT");
   const [failure, setFailure] = useState("");
   return (
@@ -1385,10 +1413,11 @@ export function AdminStudents() {
           <div className="stack">
             <p>{target.email}</p>
             <div className="stack sm">
-              {target.memberships.map((m) => (
+              {target.purchases.map((m) => (
                 <small key={m.id}>
-                  {m.plan} · Ends {new Date(m.endsAt).toLocaleDateString()}{" "}
-                  {m.revokedAt ? "· Revoked" : ""}
+                  {m.course.title} · Purchased{" "}
+                  {new Date(m.purchasedAt).toLocaleDateString()}{" "}
+                  {m.revokedAt ? "· Revoked" : ""} · {m.paymentReference}
                 </small>
               ))}
             </div>
@@ -1402,7 +1431,10 @@ export function AdminStudents() {
                   body: json({
                     action,
                     reason: f.get("reason"),
-                    plan,
+                    courseId,
+                    ...(action === "GRANT"
+                      ? { paymentReference: f.get("paymentReference") }
+                      : {}),
                     ...(action === "ROLE" ? { role } : {}),
                   }),
                 })
@@ -1419,8 +1451,8 @@ export function AdminStudents() {
                   value={action}
                   onChange={(e) => setAction(e.target.value)}
                 >
-                  <option value="GRANT">Grant / extend membership</option>
-                  <option value="REVOKE">Revoke memberships</option>
+                  <option value="GRANT">Confirm paid course purchase</option>
+                  <option value="REVOKE">Revoke course access</option>
                   <option value="RESET_DEVICES">
                     Reset registered devices
                   </option>
@@ -1431,16 +1463,36 @@ export function AdminStudents() {
                   ) : null}
                 </select>
               </label>
+              {["GRANT", "REVOKE"].includes(action) ? (
+                <label>
+                  Course package
+                  <select
+                    value={courseId}
+                    onChange={(e) => setCourseId(e.target.value)}
+                    required
+                  >
+                    <option value="">Choose a course</option>
+                    {courseOptions?.map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.title}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : null}
               {action === "GRANT" ? (
                 <label>
-                  Plan
-                  <select
-                    value={plan}
-                    onChange={(e) => setPlan(e.target.value)}
-                  >
-                    <option value="MONTHLY">Monthly</option>
-                    <option value="ANNUAL">Annual</option>
-                  </select>
+                  Verified payment reference
+                  <input
+                    name="paymentReference"
+                    required
+                    minLength={3}
+                    maxLength={150}
+                  />
+                  <small>
+                    Confirm only after checking that the course payment was
+                    received. Never enter a fabricated reference.
+                  </small>
                 </label>
               ) : null}
               {action === "ROLE" ? (

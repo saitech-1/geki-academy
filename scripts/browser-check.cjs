@@ -7,7 +7,7 @@ const { chromium } = require("playwright");
   });
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
-  await page.goto("http://127.0.0.1:3000");
+  await page.goto((process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "");
   await page.screenshot({ path: ".local/app-home.png", fullPage: true });
   const data = await page.evaluate(async () => {
     const c = document.createElement("canvas");
@@ -55,7 +55,9 @@ const { chromium } = require("playwright");
     return Array.from(bytes);
   });
   fs.writeFileSync(".local/verification.webm", Buffer.from(data));
-  await page.goto("http://127.0.0.1:3000/signin");
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "/signin",
+  );
   await page.getByLabel("Account / guardian email").fill("admin@geki.local");
   await page.locator("input[name=password]").fill("GekiLocal!2026");
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
@@ -63,13 +65,17 @@ const { chromium } = require("playwright");
   await page
     .getByRole("heading", { name: "Your journey to mastery continues." })
     .waitFor();
-  await page.goto("http://127.0.0.1:3000/admin");
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "/admin",
+  );
   await page
     .getByRole("heading", { name: "Keep the academy moving." })
     .waitFor();
   await page.screenshot({ path: ".local/app-admin.png", fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("http://127.0.0.1:3000/dashboard");
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "/dashboard",
+  );
   await page
     .getByRole("heading", { name: "Your journey to mastery continues." })
     .waitFor();

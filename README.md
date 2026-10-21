@@ -2,6 +2,14 @@
 
 A working Next.js web application, Express REST API, PostgreSQL/Prisma database and Firebase Authentication integration. The original design presentation remains in `design/`; application code lives in `apps/`.
 
+## Course-based sales (October 21, 2026)
+
+GEKI sells individual course packages through one-time purchases with ongoing access. A purchase unlocks only that course's lessons and quiz. No monthly/annual subscriptions are offered. The first Kihon preview remains public. Existing membership records are retained as historical data and no longer grant access; expiry reminders are disabled.
+
+Set each course's approved price and currency in **Admin → Courses**. Online payment integration remains unconfigured. For a payment collected through an agreed external method, use **Admin → Students → Confirm paid course purchase**, select the course, enter the verified payment reference and audit reason. This records the paid amount/currency snapshot and unlocks the course; it does not charge the customer. Never confirm payment without verifying receipt. Payment references are unique, retries are idempotent, and access can be revoked per course. Purchased courses cannot be permanently deleted.
+
+**My Courses** lists purchase receipts and ongoing access. Browser routes `/pricing` and `/checkout/:courseSlug` show individual packages and order summaries. `/membership` remains a compatibility alias for My Courses. The new `CoursePurchase` table is private and protected by RLS, with access enforced by Express/Firebase. Run the new Prisma migration before starting an updated API.
+
 ## Run locally
 
 Requires Node.js 24 and Java 21+ for the Firebase Auth Emulator. Chrome is used by the browser checks.
@@ -36,7 +44,7 @@ Local accounts, valid only against the emulator:
 | Account        | Email              | Password       |
 | -------------- | ------------------ | -------------- |
 | Super Admin    | admin@geki.local   | GekiLocal!2026 |
-| Active student | student@geki.local | GekiLocal!2026 |
+| Student        | student@geki.local | GekiLocal!2026 |
 
 The seed creates a **draft** Kihon package with four sections. Publish actual GEKI content through the admin workspace. Browser/integration tests create clearly labeled development videos and courses; these are not teaching material. No sample users or test videos are seeded into Supabase.
 
@@ -46,14 +54,14 @@ Windows embedded PostgreSQL uses `.local/postgres`, port 5433 and a UTF-8 databa
 
 - Email/password and Google sign-in, sign-up, verification, password reset and account recovery through Firebase SDKs. Adult/guardian learner onboarding and verified-email gates are enforced by the API.
 - Responsive public pages, course catalog/detail, guest preview, student dashboard, native video playback in development, resume/progress, quizzes and saved results.
-- Server-side membership checks, two account-bound browser registrations, one playback session, explicit stream transfer, two device replacements per rolling 30 days and admin override.
-- Admin course/section/lesson CRUD, reusable videos, lesson ordering, private source uploads and previews, EN/MM WebVTT editing/review, publishing guards, quiz editing, student membership/suspension/device actions, roles and audit history.
-- Profile/language preference, notifications and membership/payment history backed by PostgreSQL.
+- Server-side per-course purchase checks, two account-bound browser registrations, one playback session, explicit stream transfer, two device replacements per rolling 30 days and admin override.
+- Admin course/section/lesson CRUD, reusable videos, lesson ordering, private source uploads and previews, EN/MM WebVTT editing/review, publishing guards, quiz editing, student purchase/suspension/device actions, roles and audit history.
+- Profile/language preference, notifications and course-purchase history backed by PostgreSQL.
 - Reduced-motion styling, keyboard focus, labeled controls, responsive layouts and mobile navigation.
 
 ## Live Supabase and Firebase configuration
 
-The new Supabase project is **geki-academy**, `msrvghakwqyjwwjcravk`, in the GEKI organization, Singapore. [Open the project](https://supabase.com/dashboard/project/msrvghakwqyjwwjcravk). Its private `geki` schema contains 18 application tables. Firebase remains the identity provider; Supabase Auth is not used.
+The new Supabase project is **geki-academy**, `msrvghakwqyjwwjcravk`, in the GEKI organization, Singapore. [Open the project](https://supabase.com/dashboard/project/msrvghakwqyjwwjcravk). Its private `geki` schema contains 19 application tables. Firebase remains the identity provider; Supabase Auth is not used.
 
 The server-only runtime login `geki_api` has application-table CRUD access and no schema migration privileges. Its random password is stored in the ignored `.env.production.local`. Data API roles have no schema access; all application tables have RLS and restrictive deny policies. Express performs per-user authorization using Firebase ID tokens. Never expose the database URL to a browser.
 

@@ -9,7 +9,7 @@ const studentNav = [
   ["/dashboard", "home", "Overview"],
   ["/my-learning", "book", "My Learning"],
   ["/library", "grid", "Course Library"],
-  ["/membership", "card", "Membership"],
+  ["/purchases", "card", "My Courses"],
   ["/devices", "devices", "My Devices"],
   ["/notifications", "bell", "Notifications"],
   ["/settings", "settings", "Settings"],
@@ -18,7 +18,7 @@ const adminNav = [
   ["/admin", "grid", "Overview"],
   ["/admin/courses", "book", "Courses"],
   ["/admin/videos", "film", "Videos & Subtitles"],
-  ["/admin/students", "users", "Students & Memberships"],
+  ["/admin/students", "users", "Students & Purchases"],
   ["/admin/audit", "shield", "Roles & Audit"],
 ] as const;
 export function PublicNav() {
@@ -33,7 +33,7 @@ export function PublicNav() {
           <Link href="/">{t("Home")}</Link>
           <Link href="/library">{t("Courses")}</Link>
           <Link href="/#about">{t("About GEKI")}</Link>
-          <Link href="/pricing">{t("Membership")}</Link>
+          <Link href="/pricing">{t("Course Packages")}</Link>
         </div>
         <div className="nav-actions">
           <LanguageSelector />
@@ -66,7 +66,7 @@ export function PublicNav() {
             {[
               ["/", "Home"],
               ["/library", "Courses"],
-              ["/pricing", "Membership"],
+              ["/pricing", "Course Packages"],
               [
                 account ? "/dashboard" : "/signin",
                 account ? "My Academy" : "Sign in",
@@ -96,7 +96,7 @@ export function Footer() {
         <Logo />
         <div className="footer-links">
           <Link href="/library">{t("Courses")}</Link>
-          <Link href="/pricing">{t("Membership")}</Link>
+          <Link href="/pricing">{t("Course Packages")}</Link>
           <Link href="/preview">{t("Free lesson")}</Link>
           <Link href="/recovery">{t("Account help")}</Link>
         </div>
@@ -202,17 +202,19 @@ export function AppShell({
         </div>
         <div className="sidebar-bottom">
           <div className="panel">
-            <BadgeLabel active={!!account.membership} />
+            <BadgeLabel
+              active={!!account.purchases.some((p) => !p.revokedAt)}
+            />
             <p>
-              {account.membership
+              {account.purchases.some((p) => !p.revokedAt)
                 ? "Your next lesson is waiting."
                 : "Your progress is kept safe."}
             </p>
             <Link
               className="text-link"
-              href={admin ? "/dashboard" : "/membership"}
+              href={admin ? "/dashboard" : "/purchases"}
             >
-              {admin ? "Student view" : "Membership"}
+              {admin ? "Student view" : "My Courses"}
               <Icon name="arrow" />
             </Link>
           </div>
@@ -283,7 +285,7 @@ export function AppShell({
               {translate(
                 t
                   .replace("Course Library", "Library")
-                  .replace("Students & Memberships", "Students")
+                  .replace("Students & Purchases", "Students")
                   .replace("Videos & Subtitles", "Videos"),
               )}
             </span>
@@ -319,7 +321,7 @@ export function AppShell({
 function BadgeLabel({ active }: { active: boolean }) {
   return (
     <span className={`badge ${active ? "green" : "amber"}`}>
-      {active ? "Active member" : "No active membership"}
+      {active ? "Course owner" : "No courses purchased"}
     </span>
   );
 }

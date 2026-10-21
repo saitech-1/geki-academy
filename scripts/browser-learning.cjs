@@ -20,12 +20,18 @@ const { execFileSync } = require("node:child_process");
   });
   const errors = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("http://127.0.0.1:3000/signin");
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "/signin",
+  );
   await page.getByLabel("Account / guardian email").fill(account.email);
   await page.locator("input[name=password]").fill(account.password);
   await page.getByRole("button", { name: "Sign in", exact: true }).click();
   await page.waitForURL("**/dashboard");
-  await page.goto("http://127.0.0.1:3000/lessons/" + fixture.lessonId);
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") +
+      "/lessons/" +
+      fixture.lessonId,
+  );
   await page.getByRole("button", { name: "Start lesson", exact: true }).click();
   const video = page.locator("video");
   await video.waitFor();
@@ -42,15 +48,23 @@ const { execFileSync } = require("node:child_process");
   await page.waitForFunction(
     () => (document.querySelector("video")?.currentTime || 0) > 2,
   );
-  await page.goto("http://127.0.0.1:3000/quizzes/" + fixture.quizId);
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") +
+      "/quizzes/" +
+      fixture.quizId,
+  );
   await page.getByLabel("A development verification fixture").check();
   await page.getByRole("button", { name: "Submit quiz", exact: true }).click();
   await page.getByText("100%", { exact: true }).first().waitFor();
   await page.screenshot({ path: ".local/app-quiz.png", fullPage: true });
-  await page.goto("http://127.0.0.1:3000/dashboard");
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "/dashboard",
+  );
   await page.getByText("100%", { exact: true }).first().waitFor();
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("http://127.0.0.1:3000/devices");
+  await page.goto(
+    (process.env.TEST_WEB_URL || "http://127.0.0.1:3000") + "/devices",
+  );
   await page.getByText("Desktop browser", { exact: true }).waitFor();
   assert.equal(
     await page.evaluate(

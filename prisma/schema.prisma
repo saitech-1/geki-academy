@@ -32,6 +32,7 @@ model User {
   onboarded Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  purchases CoursePurchase[]
   memberships Membership[]
   devices Device[]
   replacements DeviceReplacement[]
@@ -69,6 +70,9 @@ model Course {
   status ContentStatus @default(DRAFT)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  priceMinor Int?
+  currency String @default("MMK")
+  purchases CoursePurchase[]
   sections Section[]
   quiz Quiz?
   @@schema("geki")
@@ -248,5 +252,21 @@ model Job {
   runAt DateTime @default(now())
   lastError String?
   createdAt DateTime @default(now())
+  @@schema("geki")
+}
+
+model CoursePurchase {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Restrict)
+  courseId String
+  course Course @relation(fields: [courseId], references: [id], onDelete: Restrict)
+  paymentReference String @unique
+  amountMinor Int
+  currency String
+  purchasedAt DateTime @default(now())
+  revokedAt DateTime?
+  @@unique([userId, courseId])
+  @@index([courseId])
   @@schema("geki")
 }

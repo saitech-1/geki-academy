@@ -21,7 +21,7 @@ import {
 } from "@geki/contracts";
 import { config } from "./config.js";
 import { db, lockUser } from "./db.js";
-import { auth, admin, activeMembership } from "./auth.js";
+import { auth, admin, courseAccess, ticketCourseAccess } from "./auth.js";
 import { HttpError, requireCondition, watchedRanges, grade } from "./domain.js";
 import { sendLocalMedia, playbackProvider } from "./media.js";
 import {
@@ -256,20 +256,14 @@ const accountLimit = rateLimit({
 });
 app.use("/api/me", auth, accountLimit);
 app.get("/api/me", async (req, res) => {
-  const now = new Date();
-  const membership = await db.membership.findFirst({
-    where: {
-      userId: req.account.id,
-      revokedAt: null,
-      startsAt: { lte: now },
-      endsAt: { gt: now },
-    },
-    orderBy: { endsAt: "desc" },
+  const purchases = await db.coursePurchase.findMany({
+    where: { userId: req.account.id },
+    select: { courseId: true, purchasedAt: true, revokedAt: true },
   });
   res.json({
     ...req.account,
     emailVerified: !!req.identity.email_verified,
-    membership,
+    purchases,
   });
 });
 app.patch("/api/me/preferences", async (req, res) => {
@@ -295,7 +289,7 @@ app.patch("/api/me/profile", async (req, res) => {
   res.json(user);
 });
 app.get("/api/me/dashboard", async (req, res) => {
-  const [progress, attempts, notifications, memberships, payments] =
+  const [progress, attempts, notifications, purchases, payments] =
     await Promise.all([
       db.progress.findMany({
         where: { userId: req.account.id },
@@ -329,9 +323,14 @@ app.get("/api/me/dashboard", async (req, res) => {
         orderBy: { createdAt: "desc" },
         take: 50,
       }),
-      db.membership.findMany({
+      db.coursePurchase.findMany({
+        include: {
+          course: {
+            select: { id: true, title: true, slug: true, thumbnail: true },
+          },
+        },
         where: { userId: req.account.id },
-        orderBy: { createdAt: "desc" },
+        orderBy: { purchasedAt: "desc" },
         take: 30,
       }),
       db.payment.findMany({
@@ -340,7 +339,7 @@ app.get("/api/me/dashboard", async (req, res) => {
         take: 30,
       }),
     ]);
-  res.json({ progress, attempts, notifications, memberships, payments });
+  res.json({ progress, attempts, notifications, purchases, payments });
 });
 app.patch("/api/me/notifications/:id", async (req, res) => {
   await db.notification.updateMany({
@@ -451,9 +450,9 @@ app.post("/api/me/playback/:id", async (req, res) => {
   const { transfer } = z
     .object({ transfer: z.boolean().default(false) })
     .parse(req.body || {});
-  await activeMembership(req);
   const l = await publishedLesson(id(req));
   requireCondition(l, 404, "NOT_FOUND", "Lesson not found.");
+  await courseAccess(req, l.section.courseId);
   requireCondition(
     (config.mediaMode === "local" && l.video.localPath) ||
       (config.mediaMode === "vdocipher" &&
@@ -526,7 +525,6 @@ app.post("/api/me/playback/:id", async (req, res) => {
   });
 });
 app.post("/api/me/playback/:id/heartbeat", async (req, res) => {
-  await activeMembership(req);
   const input = z
     .object({ position: z.number().finite().min(0), playing: z.boolean() })
     .parse(req.body);
@@ -545,6 +543,11 @@ app.post("/api/me/playback/:id/heartbeat", async (req, res) => {
       "PLAYBACK_REVOKED",
       "This playback session ended. Start again or transfer playback.",
     );
+    const accessLesson = await tx.lesson.findUniqueOrThrow({
+      where: { id: session.lessonId },
+      select: { section: { select: { courseId: true } } },
+    });
+    await courseAccess(req, accessLesson.section.courseId);
     const lesson = await tx.lesson.findUnique({
       where: { id: session.lessonId },
       include: { video: true, section: { include: { course: true } } },
@@ -622,13 +625,6 @@ app.get("/api/media/:ticket", async (req, res) => {
       expiresAt: { gt: new Date() },
       user: {
         suspended: false,
-        memberships: {
-          some: {
-            startsAt: { lte: new Date() },
-            endsAt: { gt: new Date() },
-            revokedAt: null,
-          },
-        },
       },
     },
   });
@@ -643,6 +639,12 @@ app.get("/api/media/:ticket", async (req, res) => {
   });
   requireCondition(d, 403, "DEVICE_REVOKED", "Device access revoked.");
   const l = await publishedLesson(session.lessonId);
+  requireCondition(
+    l && (await ticketCourseAccess(session.userId, l.section.courseId)),
+    403,
+    "COURSE_PURCHASE_REQUIRED",
+    "Course access is no longer available.",
+  );
   requireCondition(
     l?.video.localPath,
     404,
@@ -663,13 +665,6 @@ app.get("/api/media/:ticket/subtitles/:language", async (req, res) => {
       expiresAt: { gt: new Date() },
       user: {
         suspended: false,
-        memberships: {
-          some: {
-            startsAt: { lte: new Date() },
-            endsAt: { gt: new Date() },
-            revokedAt: null,
-          },
-        },
       },
     },
   });
@@ -684,6 +679,12 @@ app.get("/api/media/:ticket/subtitles/:language", async (req, res) => {
   });
   requireCondition(deviceOk, 403, "DEVICE_REVOKED", "Device access revoked.");
   const l = await publishedLesson(session.lessonId);
+  requireCondition(
+    l && (await ticketCourseAccess(session.userId, l.section.courseId)),
+    403,
+    "COURSE_PURCHASE_REQUIRED",
+    "Course access is no longer available.",
+  );
   requireCondition(l, 404, "NOT_FOUND", "Lesson unavailable.");
   const s = await db.subtitle.findFirst({
     where: {
@@ -696,11 +697,11 @@ app.get("/api/media/:ticket/subtitles/:language", async (req, res) => {
   res.type("text/vtt").send(s.content);
 });
 app.get("/api/me/quizzes/:id", async (req, res) => {
-  await activeMembership(req);
   const quiz = await db.quiz.findFirst({
     where: { id: id(req), published: true, course: { status: "PUBLISHED" } },
     select: {
       id: true,
+      courseId: true,
       course: { select: { title: true } },
       questions: {
         orderBy: { position: "asc" },
@@ -709,10 +710,10 @@ app.get("/api/me/quizzes/:id", async (req, res) => {
     },
   });
   requireCondition(quiz, 404, "NOT_FOUND", "Quiz unavailable.");
+  await courseAccess(req, quiz.courseId);
   res.json(quiz);
 });
 app.post("/api/me/quizzes/:id/attempts", async (req, res) => {
-  await activeMembership(req);
   const { answers } = z
     .object({ answers: z.record(z.string(), z.number().int().min(0).max(5)) })
     .parse(req.body);
@@ -721,6 +722,7 @@ app.post("/api/me/quizzes/:id/attempts", async (req, res) => {
     include: { questions: { orderBy: { position: "asc" } } },
   });
   requireCondition(quiz, 404, "NOT_FOUND", "Quiz unavailable.");
+  await courseAccess(req, quiz.courseId);
   requireCondition(
     quiz.questions.length === Object.keys(answers).length &&
       quiz.questions.every(
@@ -741,27 +743,17 @@ app.post("/api/me/quizzes/:id/attempts", async (req, res) => {
 app.use("/api/admin-media", adminSourceMedia);
 app.use("/api/admin", auth, admin, accountLimit, adminContent);
 app.get("/api/admin/overview", async (_req, res) => {
-  const [students, activeMemberships, videos, courses, queue] =
+  const [students, activePurchasers, videos, courses, queue] =
     await Promise.all([
       db.user.count(),
-      db.user.count({
-        where: {
-          memberships: {
-            some: {
-              revokedAt: null,
-              startsAt: { lte: new Date() },
-              endsAt: { gt: new Date() },
-            },
-          },
-        },
-      }),
+      db.user.count({ where: { purchases: { some: { revokedAt: null } } } }),
       db.video.count(),
       db.course.count({ where: { status: "PUBLISHED" } }),
       db.video.count({ where: { status: { in: ["PROCESSING", "REVIEW"] } } }),
     ]);
   res.json({
     students,
-    activeMemberships,
+    activePurchasers,
     videos,
     courses,
     queue,
@@ -1248,7 +1240,12 @@ app.get("/api/admin/students", async (req, res) => {
       orderBy: { createdAt: "desc" },
       take: 100,
       include: {
-        memberships: { orderBy: { endsAt: "desc" }, take: 3 },
+        purchases: {
+          include: {
+            course: { select: { id: true, title: true, slug: true } },
+          },
+          orderBy: { purchasedAt: "desc" },
+        },
         _count: { select: { devices: { where: { revokedAt: null } } } },
       },
     }),
@@ -1264,7 +1261,8 @@ app.post("/api/admin/students/:id/action", async (req, res) => {
       "RESET_DEVICES",
       "ROLE",
     ]),
-    plan: z.enum(["MONTHLY", "ANNUAL"]).optional(),
+    courseId: z.string().optional(),
+    paymentReference: z.string().trim().min(3).max(150).optional(),
     role: z.enum(["STUDENT", "ADMIN", "SUPER_ADMIN"]).optional(),
   }).parse(req.body);
   requireCondition(
@@ -1291,38 +1289,83 @@ app.post("/api/admin/students/:id/action", async (req, res) => {
       "SELF_ACTION_DENIED",
       "You cannot suspend or change your own role.",
     );
-    if (input.action === "GRANT") {
-      const active = await tx.membership.findFirst({
-        where: { userId: id(req), revokedAt: null, endsAt: { gt: new Date() } },
-        orderBy: { endsAt: "desc" },
-      });
-      const start = active?.endsAt || new Date();
-      const end = new Date(start);
-      input.plan === "ANNUAL"
-        ? end.setUTCFullYear(end.getUTCFullYear() + 1)
-        : end.setUTCMonth(end.getUTCMonth() + 1);
-      await tx.membership.create({
-        data: {
-          userId: id(req),
-          plan: input.plan || "MONTHLY",
-          startsAt: start,
-          endsAt: end,
-        },
-      });
-      await tx.notification.create({
-        data: {
-          userId: id(req),
-          title: "Membership access granted",
-          body: "Your administrator has updated your learning access.",
-          href: "/membership",
-        },
-      });
+    if (["GRANT", "REVOKE"].includes(input.action)) {
+      requireCondition(
+        input.courseId,
+        400,
+        "COURSE_REQUIRED",
+        "Choose the course package.",
+      );
+      if (input.action === "GRANT") {
+        requireCondition(
+          input.paymentReference,
+          400,
+          "PAYMENT_REFERENCE_REQUIRED",
+          "Enter the verified payment reference before unlocking this course.",
+        );
+        const course = await tx.course.findUnique({
+          where: { id: input.courseId },
+        });
+        requireCondition(
+          course && course.priceMinor && course.status === "PUBLISHED",
+          409,
+          "COURSE_NOT_FOR_SALE",
+          "Publish the course and set its price first.",
+        );
+        const existing = await tx.coursePurchase.findUnique({
+          where: {
+            userId_courseId: { userId: target.id, courseId: course.id },
+          },
+        });
+        requireCondition(
+          !existing || existing.paymentReference === input.paymentReference,
+          409,
+          "PURCHASE_EXISTS",
+          "This learner already has a purchase record for this course. Use the original payment reference to restore access.",
+        );
+        const ref = await tx.coursePurchase.findUnique({
+          where: { paymentReference: input.paymentReference },
+        });
+        requireCondition(
+          !ref || ref.id === existing?.id,
+          409,
+          "PAYMENT_REFERENCE_USED",
+          "That payment reference already belongs to a different purchase.",
+        );
+        await tx.coursePurchase.upsert({
+          where: {
+            userId_courseId: { userId: target.id, courseId: course.id },
+          },
+          create: {
+            userId: target.id,
+            courseId: course.id,
+            paymentReference: input.paymentReference,
+            amountMinor: course.priceMinor,
+            currency: course.currency,
+          },
+          update: { revokedAt: null },
+        });
+        if (!existing || existing.revokedAt)
+          await tx.notification.create({
+            data: {
+              userId: target.id,
+              title: "Course purchase confirmed",
+              body: course.title + " is now available in My Courses.",
+              href: "/courses/" + course.slug,
+            },
+          });
+      } else {
+        await tx.coursePurchase.updateMany({
+          where: {
+            userId: target.id,
+            courseId: input.courseId,
+            revokedAt: null,
+          },
+          data: { revokedAt: new Date() },
+        });
+        await tx.playbackSession.deleteMany({ where: { userId: target.id } });
+      }
     }
-    if (input.action === "REVOKE")
-      await tx.membership.updateMany({
-        where: { userId: id(req), revokedAt: null },
-        data: { revokedAt: new Date() },
-      });
     if (["SUSPEND", "RESTORE"].includes(input.action))
       await tx.user.update({
         where: { id: id(req) },
@@ -1343,7 +1386,8 @@ app.post("/api/admin/students/:id/action", async (req, res) => {
       });
     }
     await audit(tx, req, input.action, id(req), input.reason, {
-      plan: input.plan || null,
+      courseId: input.courseId || null,
+      paymentReference: input.paymentReference || null,
       role: input.role || null,
     });
   });
@@ -1358,20 +1402,43 @@ app.get("/api/admin/audit", async (_req, res) =>
     }),
   ),
 );
-app.get("/api/commerce", (_req, res) =>
+app.get("/api/commerce", async (_req, res) =>
   res.json({
     configured: false,
-    plans: [
-      { id: "MONTHLY", title: "Monthly membership", price: null },
-      { id: "ANNUAL", title: "Annual membership", price: null },
-    ],
+    model: "COURSE_PURCHASE",
+    courses: await db.course.findMany({
+      where: { status: "PUBLISHED" },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        priceMinor: true,
+        currency: true,
+      },
+    }),
   }),
 );
-app.post("/api/checkout", auth, (_req, _res) => {
+app.post("/api/checkout", auth, async (req, res) => {
+  const { courseId } = z
+    .object({ courseId: z.string().min(1) })
+    .parse(req.body);
+  const course = await db.course.findFirst({
+    where: { id: courseId, status: "PUBLISHED" },
+  });
+  requireCondition(course, 404, "NOT_FOUND", "Course unavailable.");
+  const owned = await db.coursePurchase.findUnique({
+    where: { userId_courseId: { userId: req.account.id, courseId } },
+  });
+  requireCondition(
+    !owned || owned.revokedAt,
+    409,
+    "ALREADY_PURCHASED",
+    "You already own this course. Open it in My Courses.",
+  );
   throw new HttpError(
     503,
     "PAYMENTS_NOT_CONFIGURED",
-    "Payment methods and prices have not been approved yet. No payment was taken.",
+    "Online payments are not connected yet. Contact GEKI to arrange payment for this course. Only confirmed payment unlocks access.",
   );
 });
 app.use((_req, _res) => {

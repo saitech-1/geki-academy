@@ -1,3 +1,5 @@
+> **Commercial model update — October 21, 2026:** Individual courses are sold separately through one-time purchases with ongoing access. This supersedes membership/subscription sections below. The implemented model and current payment limitations are documented in README.md. Historical membership data remains preserved.
+
 # GEKI Academy — Implementation Plan
 
 Status: agreed product scope; implementation has not started.

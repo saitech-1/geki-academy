@@ -86,34 +86,44 @@ export function admin(req: Request, _res: Response, next: NextFunction) {
     );
   next();
 }
-export async function activeMembership(req: Request) {
+export async function courseAccess(req: Request, courseId: string) {
   if (!req.identity.email_verified)
     throw new HttpError(
       403,
       "EMAIL_UNVERIFIED",
       "Verify your email before accessing paid lessons.",
     );
+  if (req.account.role !== "STUDENT") return;
   if (!req.account.onboarded)
     throw new HttpError(
       403,
       "PROFILE_REQUIRED",
       "Complete your adult/guardian learner profile in Settings first.",
     );
-  const now = new Date();
-  const membership = await db.membership.findFirst({
-    where: {
-      userId: req.account.id,
-      revokedAt: null,
-      startsAt: { lte: now },
-      endsAt: { gt: now },
-    },
-    orderBy: { endsAt: "desc" },
+  const purchase = await db.coursePurchase.findUnique({
+    where: { userId_courseId: { userId: req.account.id, courseId } },
   });
-  if (!membership)
+  if (!purchase || purchase.revokedAt)
     throw new HttpError(
       403,
-      "MEMBERSHIP_REQUIRED",
-      "An active membership is required. Your progress remains saved.",
+      "COURSE_PURCHASE_REQUIRED",
+      "Purchase this course to unlock its lessons and quiz. Your progress remains saved.",
     );
-  return membership;
+  return purchase;
+}
+export async function ticketCourseAccess(userId: string, courseId: string) {
+  const user = await db.user.findUnique({
+    where: { id: userId },
+    select: {
+      role: true,
+      suspended: true,
+      onboarded: true,
+      purchases: { where: { courseId, revokedAt: null }, select: { id: true } },
+    },
+  });
+  return (
+    !!user &&
+    !user.suspended &&
+    (user.role !== "STUDENT" || (user.onboarded && user.purchases.length > 0))
+  );
 }

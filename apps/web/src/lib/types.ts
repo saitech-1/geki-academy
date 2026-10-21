@@ -8,6 +8,8 @@ export type Lesson = {
   video: { duration: number };
 };
 export type Course = {
+  priceMinor: number | null;
+  currency: string;
   id: string;
   slug: string;
   title: string;
@@ -93,7 +95,7 @@ export type Dashboard = {
   progress: Progress[];
   attempts: Attempt[];
   notifications: Notification[];
-  memberships: Member[];
+  purchases: Purchase[];
   payments: {
     id: string;
     providerReference: string;
@@ -119,7 +121,7 @@ export type Student = {
   role: string;
   suspended: boolean;
   accountType: string;
-  memberships: Member[];
+  purchases: Purchase[];
   _count: { devices: number };
 };
 export type Playback = {
@@ -130,4 +132,15 @@ export type Playback = {
   sessionId?: string;
   watermark?: string;
   subtitles?: { language: string; url: string }[];
+};
+
+export type Purchase = {
+  id: string;
+  courseId: string;
+  paymentReference: string;
+  amountMinor: number;
+  currency: string;
+  purchasedAt: string;
+  revokedAt: string | null;
+  course: { id: string; title: string; slug: string; thumbnail?: string };
 };

@@ -1,5 +1,11 @@
 "use client";
-import { Home, Library, CourseDetail, Pricing } from "./catalog";
+import {
+  Home,
+  Library,
+  CourseDetail,
+  Pricing,
+  CourseCheckout,
+} from "./catalog";
 import { AuthPage } from "./auth-pages";
 import { AppShell, PublicLayout } from "./shell";
 import {
@@ -53,27 +59,18 @@ export function Experience({ route }: { route: string }) {
         <QuizPage key={route} quizId={route.split("/")[2]!} />
       </AppShell>
     );
-  if (route === "/checkout")
-    return (
-      <PublicLayout>
-        <Heading eyebrow="MEMBERSHIP" title="A clear next step." />
-        <div className="state-card panel">
-          <h3>Payments are not available yet.</h3>
-          <Message>
-            GEKI has not approved prices or a local payment provider. No payment
-            details are collected and no charge can be made.
-          </Message>
-          <Button href="/membership">View my membership</Button>
-        </div>
-      </PublicLayout>
-    );
+  if (route.startsWith("/checkout/"))
+    return <CourseCheckout slug={route.split("/")[2]!} />;
+  if (route === "/checkout") return <Pricing />;
   if (route === "/dashboard" || route === "/my-learning")
     return (
       <AppShell route={route}>
         <DashboardPage learningOnly={route === "/my-learning"} />
       </AppShell>
     );
-  if (["/settings", "/membership", "/notifications"].includes(route))
+  if (
+    ["/settings", "/membership", "/purchases", "/notifications"].includes(route)
+  )
     return (
       <AppShell route={route}>
         <AccountPage key={route} route={route} />

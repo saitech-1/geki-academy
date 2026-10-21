@@ -1,4 +1,5 @@
 "use client";
+import { api } from "@/lib/api";
 import { useState } from "react";
 import Link from "next/link";
 import type { Course } from "@/lib/types";
@@ -31,7 +32,14 @@ export function CourseCard({ course }: { course: Course }) {
             : course.description}
         </p>
         <div className="card-foot">
-          <span>{t("Included with membership")}</span>
+          <span>
+            {course.priceMinor
+              ? new Intl.NumberFormat("en", {
+                  style: "currency",
+                  currency: course.currency,
+                }).format(course.priceMinor / 100)
+              : "Price to be announced"}
+          </span>
           <Icon name="up" />
         </div>
       </div>
@@ -173,8 +181,8 @@ export function Home() {
             <br />
             With a clearer mind.
           </h2>
-          <Button href="/pricing">
-            Explore membership <Icon name="up" />
+          <Button href="/library">
+            Explore courses <Icon name="up" />
           </Button>
         </div>
       </section>
@@ -265,6 +273,10 @@ export function CourseDetail({ slug }: { slug: string }) {
         <Message error>{error || "Course not found."}</Message>
       </PublicLayout>
     );
+  const ownsCourse =
+    account?.role !== undefined &&
+    (account.role !== "STUDENT" ||
+      account.purchases.some((p) => p.courseId === course.id && !p.revokedAt));
   const first = course.sections.flatMap((s) => s.lessons)[0];
   return (
     <PublicLayout>
@@ -293,13 +305,23 @@ export function CourseDetail({ slug }: { slug: string }) {
           </div>
           {first ? (
             <Button
-              href={account?.membership ? "/lessons/" + first.id : "/pricing"}
+              href={
+                ownsCourse ? "/lessons/" + first.id : "/checkout/" + course.slug
+              }
             >
-              {t(account?.membership ? "Start course" : "Explore membership")}
+              {t(ownsCourse ? "Start course" : "Buy this course")}
               <Icon name="arrow" />
             </Button>
           ) : null}
-          <Badge>{t("All lessons open to active members")}</Badge>
+          <Badge>{t("One payment / Ongoing course access")}</Badge>
+          <p>
+            {course.priceMinor
+              ? new Intl.NumberFormat("en", {
+                  style: "currency",
+                  currency: course.currency,
+                }).format(course.priceMinor / 100)
+              : "Price to be announced"}
+          </p>
         </div>
       </section>
       <div className="detail-columns">
@@ -315,9 +337,8 @@ export function CourseDetail({ slug }: { slug: string }) {
                 <Link
                   key={l.id}
                   href={
-                    (l.preview && !account?.membership
-                      ? "/preview/"
-                      : "/lessons/") + l.id
+                    (l.preview && !ownsCourse ? "/preview/" : "/lessons/") +
+                    l.id
                   }
                   className="lesson-row"
                 >
@@ -328,8 +349,8 @@ export function CourseDetail({ slug }: { slug: string }) {
                   </div>
                   {l.preview ? (
                     <Badge tone="free">Free preview</Badge>
-                  ) : !account?.membership ? (
-                    <Badge>Membership</Badge>
+                  ) : !ownsCourse ? (
+                    <Badge>Purchase required</Badge>
                   ) : null}
                 </Link>
               ))}
@@ -363,48 +384,105 @@ export function CourseDetail({ slug }: { slug: string }) {
 export function Pricing() {
   return (
     <PublicLayout>
-      <div className="pricing-head">
-        <div className="eyebrow">ONE ACADEMY. ONE MEMBERSHIP.</div>
-        <h1>
-          Make understanding
-          <br />
-          part of your practice.
-        </h1>
-        <p>Both plans include the same full learning access.</p>
-      </div>
-      <div className="price-grid">
-        {["Monthly", "Annual"].map((p, i) => (
-          <div className={`price-card ${i ? "annual" : ""}`} key={p}>
-            <div className="eyebrow">
-              {i ? "A LONGER COMMITMENT" : "START YOUR PRACTICE"}
-            </div>
-            <h2>{p} membership</h2>
-            <div className="price-value">Price to be announced</div>
-            <ul className="check-list">
-              {[
-                "Full video library",
-                "All available courses",
-                "Saved progress & quizzes",
-                "English and Burmese subtitles",
-                "Two devices · One active stream",
-              ].map((t) => (
-                <li key={t}>
-                  <Icon name="check" />
-                  {t}
-                </li>
-              ))}
-            </ul>
-            <Button href="/checkout" secondary={!i}>
-              View membership details <Icon name="arrow" />
-            </Button>
-            <small>{p} access duration. Renewal method to be confirmed.</small>
-          </div>
-        ))}
-      </div>
-      <Message>
-        Local payment methods and prices are not configured yet. No automatic
-        billing is implied.
-      </Message>
+      <Heading
+        eyebrow="COURSE PACKAGES"
+        title="Choose your next course."
+        description="Pay once for each course. Keep ongoing access to its lessons and final quiz. No subscription."
+      />
+      <LibraryPackages />
+    </PublicLayout>
+  );
+}
+function LibraryPackages() {
+  const { data, error } = useData<Course[]>("/catalog");
+  return error ? (
+    <Message error>{error}</Message>
+  ) : (
+    <div className="grid-3">
+      {data?.map((c) => (
+        <CourseCard key={c.id} course={c} />
+      ))}
+    </div>
+  );
+}
+export function CourseCheckout({ slug }: { slug: string }) {
+  const { account } = useAuth();
+  const { data: course, error } = useData<Course>(
+    "/courses/" + encodeURIComponent(slug),
+  );
+  const [failure, setFailure] = useState("");
+  const [busy, setBusy] = useState(false);
+  if (error)
+    return (
+      <PublicLayout>
+        <Message error>{error}</Message>
+      </PublicLayout>
+    );
+  if (!course)
+    return (
+      <PublicLayout>
+        <Loading />
+      </PublicLayout>
+    );
+  const owned = account?.purchases.some(
+    (p) => p.courseId === course.id && !p.revokedAt,
+  );
+  return (
+    <PublicLayout>
+      <Heading
+        eyebrow="COURSE PURCHASE"
+        title={course.title}
+        description="One payment. Ongoing access to this course's lessons and quiz."
+      />
+      <section className="panel stack">
+        <h3>Order summary</h3>
+        <p>
+          {course.priceMinor
+            ? new Intl.NumberFormat("en", {
+                style: "currency",
+                currency: course.currency,
+              }).format(course.priceMinor / 100)
+            : "Price to be announced"}
+        </p>
+        <p>
+          This purchase unlocks only {course.title}. Other courses are sold
+          separately.
+        </p>
+        {owned ? (
+          <Button href={"/courses/" + course.slug}>Open your course</Button>
+        ) : !account ? (
+          <Button
+            href={"/signin?next=" + encodeURIComponent("/checkout/" + slug)}
+          >
+            Sign in to continue
+          </Button>
+        ) : (
+          <Button
+            disabled={busy || !course.priceMinor}
+            onClick={async () => {
+              setFailure("");
+              setBusy(true);
+              try {
+                await api("/checkout", {
+                  method: "POST",
+                  body: JSON.stringify({ courseId: course.id }),
+                });
+              } catch (e) {
+                setFailure(e instanceof Error ? e.message : "Checkout failed.");
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            Continue to payment
+          </Button>
+        )}
+        <Message>
+          Online payment methods are being configured. Contact GEKI to arrange
+          payment; access is unlocked only after payment is confirmed.
+        </Message>
+        {failure ? <Message error>{failure}</Message> : null}
+      </section>
     </PublicLayout>
   );
 }

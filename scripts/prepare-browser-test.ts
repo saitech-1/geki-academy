@@ -1,4 +1,4 @@
-import { writeFile } from "node:fs/promises";
+import { readFile, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
 import { db } from "../apps/api/src/db.js";
 import { firebaseAdmin } from "../apps/api/src/auth.js";
@@ -22,12 +22,14 @@ try {
       displayName: "Browser verification learner",
       onboarded: true,
       consentAt: new Date(),
-      memberships: {
+      purchases: {
         create: {
-          plan: "MONTHLY",
-          source: "LOCAL_TEST",
-          startsAt: new Date(),
-          endsAt: new Date(Date.now() + 3600000),
+          courseId: JSON.parse(
+            await readFile(".local/integration-fixture.json", "utf8"),
+          ).courseId,
+          paymentReference: "browser-test-" + identity.uid,
+          amountMinor: 500000,
+          currency: "MMK",
         },
       },
     },

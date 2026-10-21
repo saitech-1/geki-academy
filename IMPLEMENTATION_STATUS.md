@@ -1,3 +1,5 @@
+> **Commercial model update — October 21, 2026:** Individual courses are sold separately through one-time purchases with ongoing access. This supersedes membership/subscription sections below. The implemented model and current payment limitations are documented in README.md. Historical membership data remains preserved.
+
 # Implementation status
 
 Verified October 20, 2026. Baseline versions: Next.js 16.4.2, React 19.3.1, Express 5.3.0, Firebase web 13.0.0, Firebase Admin 14.5.0, Prisma 7.10.1, TypeScript 5.9.3. Exact resolved dependencies are in `package-lock.json`.
