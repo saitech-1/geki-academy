@@ -1,0 +1,955 @@
+{
+  "created": "2026-10-19",
+  "fileKey": "s44SOnDJib43TUdtvoBGGP",
+  "screensPerWidth": 40,
+  "widths": [
+    1440,
+    1280,
+    768,
+    390
+  ],
+  "manifest": [
+    {
+      "file": "GEKI-1440-01.svg",
+      "width": 1440,
+      "screens": [
+        {
+          "route": "",
+          "title": "Public landing",
+          "height": 6910.65625
+        },
+        {
+          "route": "library",
+          "title": "Course library",
+          "height": 2064.109375
+        },
+        {
+          "route": "course",
+          "title": "Course detail",
+          "height": 2558.6875
+        },
+        {
+          "route": "preview",
+          "title": "Free lesson preview",
+          "height": 2090.140625
+        },
+        {
+          "route": "signin",
+          "title": "Sign in",
+          "height": 1000
+        },
+        {
+          "route": "signup",
+          "title": "Sign up",
+          "height": 1000
+        },
+        {
+          "route": "verify",
+          "title": "Email verification",
+          "height": 1000
+        },
+        {
+          "route": "forgot",
+          "title": "Forgot password",
+          "height": 1000
+        }
+      ],
+      "bytes": 469537
+    },
+    {
+      "file": "GEKI-1440-02.svg",
+      "width": 1440,
+      "screens": [
+        {
+          "route": "reset",
+          "title": "Reset password",
+          "height": 1000
+        },
+        {
+          "route": "recovery",
+          "title": "Account recovery",
+          "height": 1000
+        },
+        {
+          "route": "dashboard",
+          "title": "Student dashboard",
+          "height": 1179.640625
+        },
+        {
+          "route": "lesson",
+          "title": "Video learning player",
+          "height": 1227.3125
+        },
+        {
+          "route": "my-learning",
+          "title": "My learning",
+          "height": 1000
+        },
+        {
+          "route": "quiz",
+          "title": "Course quiz",
+          "height": 1043.78125
+        },
+        {
+          "route": "quiz-results",
+          "title": "Quiz passed",
+          "height": 1251.375
+        },
+        {
+          "route": "quiz-retry",
+          "title": "Quiz retry",
+          "height": 1251.375
+        }
+      ],
+      "bytes": 446076
+    },
+    {
+      "file": "GEKI-1440-03.svg",
+      "width": 1440,
+      "screens": [
+        {
+          "route": "pricing",
+          "title": "Membership & pricing",
+          "height": 2017.34375
+        },
+        {
+          "route": "membership",
+          "title": "Current membership",
+          "height": 1076.375
+        },
+        {
+          "route": "membership-expired",
+          "title": "Expired membership",
+          "height": 1076.375
+        },
+        {
+          "route": "checkout",
+          "title": "Checkout",
+          "height": 1436.140625
+        },
+        {
+          "route": "payment-pending",
+          "title": "Payment pending",
+          "height": 1418.875
+        },
+        {
+          "route": "payment-success",
+          "title": "Payment successful",
+          "height": 1344.875
+        },
+        {
+          "route": "payment-failed",
+          "title": "Payment failed",
+          "height": 1344.875
+        },
+        {
+          "route": "membership-activated",
+          "title": "Membership activated",
+          "height": 1344.875
+        }
+      ],
+      "bytes": 430706
+    },
+    {
+      "file": "GEKI-1440-04.svg",
+      "width": 1440,
+      "screens": [
+        {
+          "route": "settings",
+          "title": "Profile & settings",
+          "height": 1140.96875
+        },
+        {
+          "route": "devices",
+          "title": "Device management",
+          "height": 1000
+        },
+        {
+          "route": "notifications",
+          "title": "Notifications",
+          "height": 1000
+        },
+        {
+          "route": "admin",
+          "title": "Admin overview",
+          "height": 1370.75
+        },
+        {
+          "route": "admin/courses",
+          "title": "Course management",
+          "height": 1000
+        },
+        {
+          "route": "admin/course-editor",
+          "title": "Course editor",
+          "height": 1836.984375
+        },
+        {
+          "route": "admin/videos",
+          "title": "Video management",
+          "height": 1251.78125
+        },
+        {
+          "route": "admin/subtitles",
+          "title": "Subtitle editor",
+          "height": 1365.671875
+        }
+      ],
+      "bytes": 497238
+    },
+    {
+      "file": "GEKI-1440-05.svg",
+      "width": 1440,
+      "screens": [
+        {
+          "route": "admin/students",
+          "title": "Students & memberships",
+          "height": 1100.984375
+        },
+        {
+          "route": "admin/student",
+          "title": "Student details",
+          "height": 1099.96875
+        },
+        {
+          "route": "admin/quizzes",
+          "title": "Quiz editor",
+          "height": 1188.984375
+        },
+        {
+          "route": "admin/audit",
+          "title": "Super admin & audit",
+          "height": 1090.984375
+        },
+        {
+          "route": "system",
+          "title": "Design foundations",
+          "height": 4775.40625
+        },
+        {
+          "route": "components",
+          "title": "Component library",
+          "height": 3498.78125
+        },
+        {
+          "route": "states",
+          "title": "Feedback & edge states",
+          "height": 1966.390625
+        },
+        {
+          "route": "motion",
+          "title": "Motion direction",
+          "height": 1930.09375
+        }
+      ],
+      "bytes": 537910
+    },
+    {
+      "file": "GEKI-1280-01.svg",
+      "width": 1280,
+      "screens": [
+        {
+          "route": "",
+          "title": "Public landing",
+          "height": 6763.75
+        },
+        {
+          "route": "library",
+          "title": "Course library",
+          "height": 1981.5625
+        },
+        {
+          "route": "course",
+          "title": "Course detail",
+          "height": 2523.046875
+        },
+        {
+          "route": "preview",
+          "title": "Free lesson preview",
+          "height": 2068.0625
+        },
+        {
+          "route": "signin",
+          "title": "Sign in",
+          "height": 1000
+        },
+        {
+          "route": "signup",
+          "title": "Sign up",
+          "height": 1000
+        },
+        {
+          "route": "verify",
+          "title": "Email verification",
+          "height": 1000
+        },
+        {
+          "route": "forgot",
+          "title": "Forgot password",
+          "height": 1000
+        }
+      ],
+      "bytes": 470071
+    },
+    {
+      "file": "GEKI-1280-02.svg",
+      "width": 1280,
+      "screens": [
+        {
+          "route": "reset",
+          "title": "Reset password",
+          "height": 1000
+        },
+        {
+          "route": "recovery",
+          "title": "Account recovery",
+          "height": 1000
+        },
+        {
+          "route": "dashboard",
+          "title": "Student dashboard",
+          "height": 1162.640625
+        },
+        {
+          "route": "lesson",
+          "title": "Video learning player",
+          "height": 1172.0625
+        },
+        {
+          "route": "my-learning",
+          "title": "My learning",
+          "height": 1000
+        },
+        {
+          "route": "quiz",
+          "title": "Course quiz",
+          "height": 1026.78125
+        },
+        {
+          "route": "quiz-results",
+          "title": "Quiz passed",
+          "height": 1234.375
+        },
+        {
+          "route": "quiz-retry",
+          "title": "Quiz retry",
+          "height": 1234.375
+        }
+      ],
+      "bytes": 446022
+    },
+    {
+      "file": "GEKI-1280-03.svg",
+      "width": 1280,
+      "screens": [
+        {
+          "route": "pricing",
+          "title": "Membership & pricing",
+          "height": 1981.703125
+        },
+        {
+          "route": "membership",
+          "title": "Current membership",
+          "height": 1059.375
+        },
+        {
+          "route": "membership-expired",
+          "title": "Expired membership",
+          "height": 1059.375
+        },
+        {
+          "route": "checkout",
+          "title": "Checkout",
+          "height": 1414.0625
+        },
+        {
+          "route": "payment-pending",
+          "title": "Payment pending",
+          "height": 1396.796875
+        },
+        {
+          "route": "payment-success",
+          "title": "Payment successful",
+          "height": 1322.796875
+        },
+        {
+          "route": "payment-failed",
+          "title": "Payment failed",
+          "height": 1322.796875
+        },
+        {
+          "route": "membership-activated",
+          "title": "Membership activated",
+          "height": 1322.796875
+        }
+      ],
+      "bytes": 430657
+    },
+    {
+      "file": "GEKI-1280-04.svg",
+      "width": 1280,
+      "screens": [
+        {
+          "route": "settings",
+          "title": "Profile & settings",
+          "height": 1123.96875
+        },
+        {
+          "route": "devices",
+          "title": "Device management",
+          "height": 1000
+        },
+        {
+          "route": "notifications",
+          "title": "Notifications",
+          "height": 1000
+        },
+        {
+          "route": "admin",
+          "title": "Admin overview",
+          "height": 1341.75
+        },
+        {
+          "route": "admin/courses",
+          "title": "Course management",
+          "height": 1000
+        },
+        {
+          "route": "admin/course-editor",
+          "title": "Course editor",
+          "height": 1819.984375
+        },
+        {
+          "route": "admin/videos",
+          "title": "Video management",
+          "height": 1234.78125
+        },
+        {
+          "route": "admin/subtitles",
+          "title": "Subtitle editor",
+          "height": 1310.421875
+        }
+      ],
+      "bytes": 497613
+    },
+    {
+      "file": "GEKI-1280-05.svg",
+      "width": 1280,
+      "screens": [
+        {
+          "route": "admin/students",
+          "title": "Students & memberships",
+          "height": 1071.984375
+        },
+        {
+          "route": "admin/student",
+          "title": "Student details",
+          "height": 1082.96875
+        },
+        {
+          "route": "admin/quizzes",
+          "title": "Quiz editor",
+          "height": 1171.984375
+        },
+        {
+          "route": "admin/audit",
+          "title": "Super admin & audit",
+          "height": 1073.984375
+        },
+        {
+          "route": "system",
+          "title": "Design foundations",
+          "height": 4713.578125
+        },
+        {
+          "route": "components",
+          "title": "Component library",
+          "height": 3476.703125
+        },
+        {
+          "route": "states",
+          "title": "Feedback & edge states",
+          "height": 1944.3125
+        },
+        {
+          "route": "motion",
+          "title": "Motion direction",
+          "height": 1934.265625
+        }
+      ],
+      "bytes": 538169
+    },
+    {
+      "file": "GEKI-768-01.svg",
+      "width": 768,
+      "screens": [
+        {
+          "route": "",
+          "title": "Public landing",
+          "height": 6623.359375
+        },
+        {
+          "route": "library",
+          "title": "Course library",
+          "height": 1955.65625
+        },
+        {
+          "route": "course",
+          "title": "Course detail",
+          "height": 2586.578125
+        },
+        {
+          "route": "preview",
+          "title": "Free lesson preview",
+          "height": 1758.65625
+        },
+        {
+          "route": "signin",
+          "title": "Sign in",
+          "height": 1000
+        },
+        {
+          "route": "signup",
+          "title": "Sign up",
+          "height": 1000
+        },
+        {
+          "route": "verify",
+          "title": "Email verification",
+          "height": 1000
+        },
+        {
+          "route": "forgot",
+          "title": "Forgot password",
+          "height": 1000
+        }
+      ],
+      "bytes": 472088
+    },
+    {
+      "file": "GEKI-768-02.svg",
+      "width": 768,
+      "screens": [
+        {
+          "route": "reset",
+          "title": "Reset password",
+          "height": 1000
+        },
+        {
+          "route": "recovery",
+          "title": "Account recovery",
+          "height": 1000
+        },
+        {
+          "route": "dashboard",
+          "title": "Student dashboard",
+          "height": 1435.640625
+        },
+        {
+          "route": "lesson",
+          "title": "Video learning player",
+          "height": 1746.515625
+        },
+        {
+          "route": "my-learning",
+          "title": "My learning",
+          "height": 1000
+        },
+        {
+          "route": "quiz",
+          "title": "Course quiz",
+          "height": 1023.78125
+        },
+        {
+          "route": "quiz-results",
+          "title": "Quiz passed",
+          "height": 1231.375
+        },
+        {
+          "route": "quiz-retry",
+          "title": "Quiz retry",
+          "height": 1257.625
+        }
+      ],
+      "bytes": 423618
+    },
+    {
+      "file": "GEKI-768-03.svg",
+      "width": 768,
+      "screens": [
+        {
+          "route": "pricing",
+          "title": "Membership & pricing",
+          "height": 1846.859375
+        },
+        {
+          "route": "membership",
+          "title": "Current membership",
+          "height": 1459.953125
+        },
+        {
+          "route": "membership-expired",
+          "title": "Expired membership",
+          "height": 1459.953125
+        },
+        {
+          "route": "checkout",
+          "title": "Checkout",
+          "height": 1394.15625
+        },
+        {
+          "route": "payment-pending",
+          "title": "Payment pending",
+          "height": 1310.140625
+        },
+        {
+          "route": "payment-success",
+          "title": "Payment successful",
+          "height": 1236.140625
+        },
+        {
+          "route": "payment-failed",
+          "title": "Payment failed",
+          "height": 1236.140625
+        },
+        {
+          "route": "membership-activated",
+          "title": "Membership activated",
+          "height": 1236.140625
+        }
+      ],
+      "bytes": 422067
+    },
+    {
+      "file": "GEKI-768-04.svg",
+      "width": 768,
+      "screens": [
+        {
+          "route": "settings",
+          "title": "Profile & settings",
+          "height": 1701.21875
+        },
+        {
+          "route": "devices",
+          "title": "Device management",
+          "height": 1249.015625
+        },
+        {
+          "route": "notifications",
+          "title": "Notifications",
+          "height": 1000
+        },
+        {
+          "route": "admin",
+          "title": "Admin overview",
+          "height": 1873.546875
+        },
+        {
+          "route": "admin/courses",
+          "title": "Course management",
+          "height": 1000
+        },
+        {
+          "route": "admin/course-editor",
+          "title": "Course editor",
+          "height": 2744.875
+        },
+        {
+          "route": "admin/videos",
+          "title": "Video management",
+          "height": 1231.78125
+        },
+        {
+          "route": "admin/subtitles",
+          "title": "Subtitle editor",
+          "height": 1953.734375
+        }
+      ],
+      "bytes": 467000
+    },
+    {
+      "file": "GEKI-768-05.svg",
+      "width": 768,
+      "screens": [
+        {
+          "route": "admin/students",
+          "title": "Students & memberships",
+          "height": 1238.984375
+        },
+        {
+          "route": "admin/student",
+          "title": "Student details",
+          "height": 1096.96875
+        },
+        {
+          "route": "admin/quizzes",
+          "title": "Quiz editor",
+          "height": 1707.078125
+        },
+        {
+          "route": "admin/audit",
+          "title": "Super admin & audit",
+          "height": 1070.984375
+        },
+        {
+          "route": "system",
+          "title": "Design foundations",
+          "height": 4843.296875
+        },
+        {
+          "route": "components",
+          "title": "Component library",
+          "height": 4958.140625
+        },
+        {
+          "route": "states",
+          "title": "Feedback & edge states",
+          "height": 2728.0625
+        },
+        {
+          "route": "motion",
+          "title": "Motion direction",
+          "height": 2575.390625
+        }
+      ],
+      "bytes": 523671
+    },
+    {
+      "file": "GEKI-390-01.svg",
+      "width": 390,
+      "screens": [
+        {
+          "route": "",
+          "title": "Public landing",
+          "height": 8889.65625
+        },
+        {
+          "route": "library",
+          "title": "Course library",
+          "height": 2969.1875
+        },
+        {
+          "route": "course",
+          "title": "Course detail",
+          "height": 3385.84375
+        },
+        {
+          "route": "preview",
+          "title": "Free lesson preview",
+          "height": 1589.234375
+        },
+        {
+          "route": "signin",
+          "title": "Sign in",
+          "height": 1000
+        },
+        {
+          "route": "signup",
+          "title": "Sign up",
+          "height": 1118.3125
+        },
+        {
+          "route": "verify",
+          "title": "Email verification",
+          "height": 1000
+        },
+        {
+          "route": "forgot",
+          "title": "Forgot password",
+          "height": 1000
+        }
+      ],
+      "bytes": 469120
+    },
+    {
+      "file": "GEKI-390-02.svg",
+      "width": 390,
+      "screens": [
+        {
+          "route": "reset",
+          "title": "Reset password",
+          "height": 1000
+        },
+        {
+          "route": "recovery",
+          "title": "Account recovery",
+          "height": 1000
+        },
+        {
+          "route": "dashboard",
+          "title": "Student dashboard",
+          "height": 1755.59375
+        },
+        {
+          "route": "lesson",
+          "title": "Video learning player",
+          "height": 1619.65625
+        },
+        {
+          "route": "my-learning",
+          "title": "My learning",
+          "height": 1372.96875
+        },
+        {
+          "route": "quiz",
+          "title": "Course quiz",
+          "height": 1040.921875
+        },
+        {
+          "route": "quiz-results",
+          "title": "Quiz passed",
+          "height": 1368.734375
+        },
+        {
+          "route": "quiz-retry",
+          "title": "Quiz retry",
+          "height": 1368.734375
+        }
+      ],
+      "bytes": 419569
+    },
+    {
+      "file": "GEKI-390-03.svg",
+      "width": 390,
+      "screens": [
+        {
+          "route": "pricing",
+          "title": "Membership & pricing",
+          "height": 2505.859375
+        },
+        {
+          "route": "membership",
+          "title": "Current membership",
+          "height": 1500.140625
+        },
+        {
+          "route": "membership-expired",
+          "title": "Expired membership",
+          "height": 1500.140625
+        },
+        {
+          "route": "checkout",
+          "title": "Checkout",
+          "height": 1917.9375
+        },
+        {
+          "route": "payment-pending",
+          "title": "Payment pending",
+          "height": 1173.4375
+        },
+        {
+          "route": "payment-success",
+          "title": "Payment successful",
+          "height": 1173.4375
+        },
+        {
+          "route": "payment-failed",
+          "title": "Payment failed",
+          "height": 1173.4375
+        },
+        {
+          "route": "membership-activated",
+          "title": "Membership activated",
+          "height": 1173.4375
+        }
+      ],
+      "bytes": 420573
+    },
+    {
+      "file": "GEKI-390-04.svg",
+      "width": 390,
+      "screens": [
+        {
+          "route": "settings",
+          "title": "Profile & settings",
+          "height": 1762.5625
+        },
+        {
+          "route": "devices",
+          "title": "Device management",
+          "height": 1319.203125
+        },
+        {
+          "route": "notifications",
+          "title": "Notifications",
+          "height": 978.359375
+        },
+        {
+          "route": "admin",
+          "title": "Admin overview",
+          "height": 1938.765625
+        },
+        {
+          "route": "admin/courses",
+          "title": "Course management",
+          "height": 984.78125
+        },
+        {
+          "route": "admin/course-editor",
+          "title": "Course editor",
+          "height": 2786.71875
+        },
+        {
+          "route": "admin/videos",
+          "title": "Video management",
+          "height": 1369.53125
+        },
+        {
+          "route": "admin/subtitles",
+          "title": "Subtitle editor",
+          "height": 1877.78125
+        }
+      ],
+      "bytes": 465796
+    },
+    {
+      "file": "GEKI-390-05.svg",
+      "width": 390,
+      "screens": [
+        {
+          "route": "admin/students",
+          "title": "Students & memberships",
+          "height": 1381.6875
+        },
+        {
+          "route": "admin/student",
+          "title": "Student details",
+          "height": 1636.515625
+        },
+        {
+          "route": "admin/quizzes",
+          "title": "Quiz editor",
+          "height": 1747.53125
+        },
+        {
+          "route": "admin/audit",
+          "title": "Super admin & audit",
+          "height": 1281.65625
+        },
+        {
+          "route": "system",
+          "title": "Design foundations",
+          "height": 5675.96875
+        },
+        {
+          "route": "components",
+          "title": "Component library",
+          "height": 5179.21875
+        },
+        {
+          "route": "states",
+          "title": "Feedback & edge states",
+          "height": 3814.84375
+        },
+        {
+          "route": "motion",
+          "title": "Motion direction",
+          "height": 2638.546875
+        }
+      ],
+      "bytes": 524052
+    }
+  ],
+  "overflow": [],
+  "errors": []
+}

@@ -1,0 +1,252 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  schemas = ["geki"]
+}
+enum Role {
+  STUDENT
+  ADMIN
+  SUPER_ADMIN
+  @@schema("geki")
+}
+enum ContentStatus {
+  DRAFT
+  PROCESSING
+  REVIEW
+  READY
+  PUBLISHED
+  @@schema("geki")
+}
+model User {
+  id String @id @default(cuid())
+  firebaseUid String @unique
+  email String
+  role Role @default(STUDENT)
+  suspended Boolean @default(false)
+  displayName String
+  language String @default("en")
+  accountType String @default("ADULT")
+  consentAt DateTime?
+  onboarded Boolean @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  memberships Membership[]
+  devices Device[]
+  replacements DeviceReplacement[]
+  playback PlaybackSession?
+  progress Progress[]
+  attempts QuizAttempt[]
+  notifications Notification[]
+  auditEvents AuditEvent[]
+  @@index([email])
+  @@schema("geki")
+}
+model Membership {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan String
+  startsAt DateTime
+  endsAt DateTime
+  revokedAt DateTime?
+  source String @default("ADMIN")
+  createdAt DateTime @default(now())
+  @@index([userId, endsAt])
+  @@schema("geki")
+}
+model Course {
+  id String @id @default(cuid())
+  slug String @unique
+  title String
+  titleMm String @default("")
+  description String
+  descriptionMm String @default("")
+  instructor String @default("GEKI Instruction Team")
+  thumbnail String @default("/images/hero.jpg")
+  category String @default("Kihon")
+  status ContentStatus @default(DRAFT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  sections Section[]
+  quiz Quiz?
+  @@schema("geki")
+}
+model Section {
+  id String @id @default(cuid())
+  courseId String
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title String
+  titleMm String @default("")
+  position Int
+  lessons Lesson[]
+  @@unique([courseId, position])
+  @@schema("geki")
+}
+model Video {
+  id String @id @default(cuid())
+  title String
+  duration Int @default(0)
+  providerAssetId String?
+  localPath String?
+  mimeType String?
+  status ContentStatus @default(DRAFT)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  lessons Lesson[]
+  subtitles Subtitle[]
+  progress Progress[]
+  @@index([status])
+  @@schema("geki")
+}
+model Subtitle {
+  id String @id @default(cuid())
+  videoId String
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  language String
+  content String
+  approved Boolean @default(false)
+  updatedAt DateTime @updatedAt
+  @@unique([videoId, language])
+  @@schema("geki")
+}
+model Lesson {
+  id String @id @default(cuid())
+  sectionId String
+  section Section @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  videoId String
+  video Video @relation(fields: [videoId], references: [id])
+  title String
+  titleMm String @default("")
+  description String @default("")
+  position Int
+  preview Boolean @default(false)
+  @@unique([sectionId, position])
+  @@index([videoId])
+  @@schema("geki")
+}
+model Progress {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  videoId String
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  position Float @default(0)
+  watchedSeconds Float @default(0)
+  watchedRanges Json @default("[]")
+  completedAt DateTime?
+  updatedAt DateTime @updatedAt
+  @@unique([userId, videoId])
+  @@schema("geki")
+}
+model Quiz {
+  id String @id @default(cuid())
+  courseId String @unique
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  published Boolean @default(false)
+  questions Question[]
+  attempts QuizAttempt[]
+  @@schema("geki")
+}
+model Question {
+  id String @id @default(cuid())
+  quizId String
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  prompt String
+  options Json
+  correctIndex Int
+  explanation String
+  position Int
+  @@unique([quizId, position])
+  @@schema("geki")
+}
+model QuizAttempt {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  quizId String
+  quiz Quiz @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  score Int
+  passed Boolean
+  answers Json
+  review Json
+  createdAt DateTime @default(now())
+  @@index([userId, quizId])
+  @@schema("geki")
+}
+model Device {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  secretHash String @unique
+  label String
+  revokedAt DateTime?
+  createdAt DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+  @@index([userId, revokedAt])
+  @@schema("geki")
+}
+model DeviceReplacement {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+  @@schema("geki")
+}
+model PlaybackSession {
+  id String @id @default(cuid())
+  userId String @unique
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId String
+  lessonId String
+  lastHeartbeat DateTime @default(now())
+  expiresAt DateTime
+  lastPosition Float @default(0)
+  @@schema("geki")
+}
+model Notification {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title String
+  body String
+  href String @default("/dashboard")
+  readAt DateTime?
+  createdAt DateTime @default(now())
+  dedupeKey String? @unique
+  @@index([userId, createdAt])
+  @@schema("geki")
+}
+model AuditEvent {
+  id String @id @default(cuid())
+  actorId String
+  actor User @relation(fields: [actorId], references: [id])
+  action String
+  target String
+  reason String
+  data Json @default("{}")
+  createdAt DateTime @default(now())
+  @@schema("geki")
+}
+model Payment {
+  id String @id @default(cuid())
+  userId String
+  providerReference String @unique
+  status String
+  plan String
+  createdAt DateTime @default(now())
+  @@schema("geki")
+}
+model Job {
+  id String @id @default(cuid())
+  kind String
+  payload Json
+  status String @default("PENDING")
+  attempts Int @default(0)
+  runAt DateTime @default(now())
+  lastError String?
+  createdAt DateTime @default(now())
+  @@schema("geki")
+}

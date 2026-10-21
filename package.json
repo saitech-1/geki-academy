@@ -1,0 +1,64 @@
+{
+  "name": "geki-academy",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n api,web \"npm run dev -w @geki/api\" \"npm run dev -w @geki/web\"",
+    "dev:all": "concurrently -k -n postgres,auth,api,web \"npm run db:local\" \"npm run auth:emulator\" \"npm run dev -w @geki/api\" \"npm run dev -w @geki/web\"",
+    "db:local": "tsx scripts/local-postgres.ts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy && tsx scripts/secure-database.ts",
+    "db:seed": "tsx scripts/seed.ts",
+    "auth:emulator": "node scripts/auth-emulator.mjs",
+    "setup:local": "tsx scripts/setup-local.ts",
+    "admin:grant": "tsx scripts/grant-admin.ts",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run db:generate && npm run build --workspaces --if-present",
+    "test": "vitest run",
+    "test:integration": "tsx scripts/integration-test.ts",
+    "test:reminders": "tsx scripts/reminders-integration.ts",
+    "test:admin": "node scripts/browser-check.cjs && tsx scripts/admin-crud-test.ts && node scripts/admin-browser.cjs",
+    "test:owner": "tsx scripts/owner-invitation-test.ts",
+    "test:browser": "node scripts/browser-check.cjs && npm run test:integration && node scripts/browser-learning.cjs",
+    "check:live-db": "node scripts/check-live-db.mjs",
+    "reminders:once": "tsx scripts/membership-reminders.ts --once",
+    "reminders:worker": "tsx scripts/membership-reminders.ts",
+    "db:migrate:live": "node --env-file=.env.migrations.local node_modules/prisma/build/index.js migrate deploy && node --env-file=.env.migrations.local --import tsx scripts/secure-database.ts",
+    "start:reminders:live": "node --env-file=.env.production.local --import tsx scripts/membership-reminders.ts",
+    "start:api:live": "node --env-file=.env.production.local --import tsx apps/api/src/index.ts",
+    "start:web:live": "npm run start -w @geki/web -- --port 3000"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "7.10.1",
+    "@prisma/client": "7.10.1",
+    "dotenv": "17.2.3",
+    "pg": "8.16.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/pg": "^8.15.0",
+    "concurrently": "^9.2.0",
+    "embedded-postgres": "18.4.0-beta.17",
+    "firebase-tools": "15.34.0",
+    "playwright": "1.58.2",
+    "prettier": "^3.6.2",
+    "prisma": "7.10.1",
+    "tsx": "4.23.15",
+    "typescript": "5.9.3",
+    "vitest": "5.0.5"
+  },
+  "optionalDependencies": {
+    "@embedded-postgres/windows-x64": "18.4.0-beta.17"
+  },
+  "overrides": {
+    "@grpc/grpc-js": "1.14.6"
+  }
+}

@@ -1,0 +1,42 @@
+{
+  "fileKey": "s44SOnDJib43TUdtvoBGGP",
+  "fileUrl": "https://www.figma.com/design/s44SOnDJib43TUdtvoBGGP",
+  "results": [
+    {
+      "file": "GEKI-FINAL-1440.svg",
+      "status": 200,
+      "success": true,
+      "imageHash": "f6e8ee64e5df23636cc1919426ed9ff55a57fe1e",
+      "sizeBytes": 1121661,
+      "contentType": "image/svg+xml",
+      "placedOnNodeId": "5:2"
+    },
+    {
+      "file": "GEKI-FINAL-1280.svg",
+      "status": 200,
+      "success": true,
+      "imageHash": "e780bc3ba7bb8298cce4325a884327b8293120b0",
+      "sizeBytes": 1122726,
+      "contentType": "image/svg+xml",
+      "placedOnNodeId": "5:9888"
+    },
+    {
+      "file": "GEKI-FINAL-768.svg",
+      "status": 200,
+      "success": true,
+      "imageHash": "0f3a4be2a47ef9d0e84b105d50182835c9e60cd1",
+      "sizeBytes": 1047237,
+      "contentType": "image/svg+xml",
+      "placedOnNodeId": "5:19788"
+    },
+    {
+      "file": "GEKI-FINAL-390.svg",
+      "status": 200,
+      "success": true,
+      "imageHash": "fc79a085e3607fd1d6f620d0963e0df46b4163d0",
+      "sizeBytes": 1037504,
+      "contentType": "image/svg+xml",
+      "placedOnNodeId": "5:28770"
+    }
+  ]
+}

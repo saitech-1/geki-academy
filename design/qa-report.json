@@ -1,0 +1,34 @@
+{
+  "responsive": {
+    "screens": 40,
+    "widths": [
+      1440,
+      1280,
+      768,
+      390
+    ],
+    "compositions": 160,
+    "overflows": [],
+    "brokenImages": 0,
+    "pageErrors": []
+  },
+  "smokeChecks": {
+    "librarySearch": "passed: kata returns one card",
+    "deviceTransferDialog": "passed: opens and cancels",
+    "quizRequiredSelection": "passed",
+    "quizNextQuestion": "passed: advances to 2",
+    "reducedMotion": "passed: animationName none",
+    "burmeseSubtitleEditor": "passed: switches to Burmese sample"
+  },
+  "figma": {
+    "finalBoards": 4,
+    "allImportsSucceeded": true,
+    "nativeCanvasInspection": "blocked by Starter connector limit and browser WebGL",
+    "nativeComponentsAndPrototypeWiring": "not completed"
+  },
+  "limitations": [
+    "Concept photography requires approval and replacement",
+    "Burmese sample copy requires native review",
+    "No production backend or providers are connected"
+  ]
+}

@@ -1,0 +1,276 @@
+{
+  "fileKey": "s44SOnDJib43TUdtvoBGGP",
+  "fileUrl": "https://www.figma.com/design/s44SOnDJib43TUdtvoBGGP",
+  "first": {
+    "file": "GEKI-1440-01.svg",
+    "nodeId": "4:2"
+  },
+  "results": [
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-1440-02.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "94313f378ef20723123e3e29a0508cc5e5799351",
+          "sizeBytes": 429797,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:30746"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-1440-03.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "d8e4a215c5551f31003817c873e5b4455066e11b",
+          "sizeBytes": 416424,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:25490"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-1440-04.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "39ddce20b3788808c88f37663e6cf21c30e3ce3b",
+          "sizeBytes": 476087,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:5643"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-1440-05.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "186c19d961a063059be2d3a8f07df7e83f90da0a",
+          "sizeBytes": 513803,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:9214"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-1280-01.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "eee02fa5cbf1c9c2bef1046d4945c52d9d884bd6",
+          "sizeBytes": 453129,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:15019"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-1280-02.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "57230b90d34d636e31bd8c0ac605b8bbc0fda5bd",
+          "sizeBytes": 429743,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:4060"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-1280-03.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "f1df7409798db077a9c4ca60e69ea3d90233ccc6",
+          "sizeBytes": 416375,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:7851"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-1280-04.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "d7425101bd054490fb4f8199751d970c2d40d99b",
+          "sizeBytes": 476405,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:1849"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-1280-05.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "b4fdb87aef28eb1a23f4e67b4f1f92899cdbf56a",
+          "sizeBytes": 513967,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:26853"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-768-01.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "73dd7b7bcd2ad3f24ef0ff8db7bc94a2dd6dd3ff",
+          "sizeBytes": 454746,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:11856"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-768-02.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "4adde0fc2dbcd6fbe08cb8584587b6461303311d",
+          "sizeBytes": 409575,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:13714"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-768-03.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "34265ea1837e4e60f037b388906afe044a523f46",
+          "sizeBytes": 408537,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:18090"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-768-04.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "187b40cde4179e5007138ca7acb8e5321f005c6d",
+          "sizeBytes": 449024,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:19339"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-768-05.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "b2a5eddac1a5443a2be6fa86a2040ec73801e1d5",
+          "sizeBytes": 500883,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:21197"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-390-01.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "a3447db71338425bafbda5cea79a75c1d8a6c15e",
+          "sizeBytes": 452042,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:23666"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-390-02.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "bbbfdd7338b2c52f6cb680fd086ced310dc270cd",
+          "sizeBytes": 406574,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:29500"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-390-03.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "7d7ac7ff7a4914419b296bb4aec0c3d7bc20a9a9",
+          "sizeBytes": 407442,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:16872"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-390-04.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "e84b2eb11930867ade1e221397918979619f8983",
+          "sizeBytes": 448538,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:32329"
+        }
+      }
+    },
+    {
+      "status": "fulfilled",
+      "value": {
+        "file": "GEKI-390-05.svg",
+        "status": 200,
+        "result": {
+          "success": true,
+          "imageHash": "85fdfcb688005ff7ba0bdaadc29eff07bc48e255",
+          "sizeBytes": 501462,
+          "contentType": "image/svg+xml",
+          "placedOnNodeId": "4:34149"
+        }
+      }
+    }
+  ]
+}

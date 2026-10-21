@@ -1,0 +1,17 @@
+services:
+  postgres:
+    image: postgres:18
+    environment:
+      POSTGRES_USER: geki
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD}
+      POSTGRES_DB: geki
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - geki_database:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U geki"]
+      interval: 5s
+      retries: 10
+volumes:
+  geki_database:
