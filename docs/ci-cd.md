@@ -6,7 +6,7 @@ GEKI deploys one Next.js application from the repository root. The previous apps
 
 App checks runs on pushes, pull requests and manual dispatch. It uses Node 24.20.0, the npm lockfile, pinned Actions, read-only repository access, timeouts and cancellation of superseded runs.
 
-1. **Typecheck, unit tests and production build** installs locked build dependencies, generates Prisma, typechecks the full app, runs unit tests and builds Next.js. Static builds do not need production database credentials: API modules load at request time.
+1. **Typecheck, unit tests and production build** installs locked build dependencies, generates Prisma, checks Firebase Admin module loading with native CommonJS-to-ESM loading disabled, verifies an RSA key/signature round trip, typechecks the full app, runs unit tests and builds Next.js. Static builds do not need production database credentials: API modules load at request time.
 2. **Auth, paid access and QR payment regression tests** provisions PostgreSQL and Firebase Auth Emulator, applies all existing migrations and database security, and starts Next.js on port 3000. Existing API/payment tests call the real Next.js Route Handler. Test identities, receipts and orders remain isolated from live services.
 3. **Release gate** fails if either dependency fails, is skipped or cancelled.
 
