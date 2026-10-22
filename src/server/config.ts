@@ -1,7 +1,12 @@
 import { config as dotenv } from "dotenv";
 import { resolve } from "node:path";
 dotenv({
-  path: resolve(process.cwd(), process.env.NODE_ENV === "production" ? ".env.production.local" : ".env"),
+  path: resolve(
+    process.cwd(),
+    process.env.NODE_ENV === "production"
+      ? ".env.production.local"
+      : ".env.development.local",
+  ),
   quiet: true,
 });
 const root = process.cwd();
@@ -17,7 +22,10 @@ export const config = {
   origins: (
     process.env.WEB_ORIGINS || "http://localhost:3000,http://127.0.0.1:3000"
   ).split(","),
-  uploadDir: resolve(/* turbopackIgnore: true */ root, process.env.UPLOAD_DIR || ".local/uploads"),
+  uploadDir: resolve(
+    /* turbopackIgnore: true */ root,
+    process.env.UPLOAD_DIR || ".local/uploads",
+  ),
   mediaMode: process.env.MEDIA_MODE || "disabled",
   videoSecret: process.env.VDOCIPHER_API_SECRET,
 };

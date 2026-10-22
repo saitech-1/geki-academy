@@ -56,7 +56,7 @@ Never configure FIREBASE*AUTH_EMULATOR_HOST or NEXT_PUBLIC_AUTH_EMULATOR_URL in 
 
 The private Supabase schema is `geki` in project msrvghakwqyjwwjcravk. Firebase remains the identity provider; Supabase Auth is not used. The runtime role `geki_api` has no migration privileges. Run `npm run db:migrate:live` separately with the ignored migration credentials before releasing schema changes. Never run the seed or integration fixtures against the live database.
 
-For a local real-Firebase build, keep configuration in ignored root `.env.production.local` and run `npm run build` then `npm run start:live`. Browser and server settings now share that root file. Existing private uploads remain in the same root `.local/uploads` directory.
+For a local real-Firebase build, keep configuration in ignored root `.env.production.local` and run `npm run build` then `npm run start:live`. Development settings belong in `.env.development.local`; do not put emulator defaults in a generic `.env` that production would also load. Browser and server settings share the environment's root file. Existing private uploads remain in the same root `.local/uploads` directory.
 
 ## Learning and commerce
 

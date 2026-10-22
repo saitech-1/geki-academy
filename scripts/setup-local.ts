@@ -1,8 +1,5 @@
 import { copyFile, mkdir, access } from "node:fs/promises";
-for (const [source, target] of [
-  [".env.example", ".env"],
-
-]) {
+for (const [source, target] of [[".env.example", ".env.development.local"]]) {
   try {
     await access(target!);
   } catch {
