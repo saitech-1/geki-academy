@@ -2,6 +2,8 @@
 
 A working Next.js web application, Express REST API, PostgreSQL/Prisma database and Firebase Authentication integration. The original design presentation remains in `design/`; application code lives in `apps/`.
 
+Build verification and release-gate setup are documented in [CI/CD](docs/ci-cd.md).
+
 ## Course-based sales (October 21, 2026)
 
 GEKI sells individual course packages through one-time purchases with ongoing access. A purchase unlocks only that course's lessons and quiz. No monthly/annual subscriptions are offered. The first Kihon preview remains public. Existing membership records are retained as historical data and no longer grant access; expiry reminders are disabled.
