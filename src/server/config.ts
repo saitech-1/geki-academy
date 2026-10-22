@@ -1,21 +1,13 @@
 import { config as dotenv } from "dotenv";
-import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 dotenv({
-  path: fileURLToPath(
-    new URL(
-      process.env.NODE_ENV === "production"
-        ? "../../../.env.production.local"
-        : "../../../.env",
-      import.meta.url,
-    ),
-  ),
+  path: resolve(process.cwd(), process.env.NODE_ENV === "production" ? ".env.production.local" : ".env"),
   quiet: true,
 });
-const root = fileURLToPath(new URL("../../../", import.meta.url));
+const root = process.cwd();
 export const config = {
   production: process.env.NODE_ENV === "production",
-  port: Number(process.env.PORT || 4000),
+  port: Number(process.env.PORT || 3000),
   host: process.env.HOST || "127.0.0.1",
   databaseUrl:
     process.env.DATABASE_URL ||
@@ -25,7 +17,7 @@ export const config = {
   origins: (
     process.env.WEB_ORIGINS || "http://localhost:3000,http://127.0.0.1:3000"
   ).split(","),
-  uploadDir: resolve(root, process.env.UPLOAD_DIR || ".local/uploads"),
+  uploadDir: resolve(/* turbopackIgnore: true */ root, process.env.UPLOAD_DIR || ".local/uploads"),
   mediaMode: process.env.MEDIA_MODE || "disabled",
   videoSecret: process.env.VDOCIPHER_API_SECRET,
 };

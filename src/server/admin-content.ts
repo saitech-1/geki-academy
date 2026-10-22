@@ -1,12 +1,12 @@
-import { Router, type Request } from "express";
+import { createEndpoints, type Request, type Response } from "./http";
 import { randomBytes, createHmac, timingSafeEqual } from "node:crypto";
 import { unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
-import { db } from "./db.js";
-import { config } from "./config.js";
-import { requireCondition } from "./domain.js";
-import { sendLocalMedia } from "./media.js";
+import { db } from "./db";
+import { config } from "./config";
+import { requireCondition } from "./domain";
+import { sendLocalMedia } from "./media";
 import { ReasonInput } from "@geki/contracts";
 import {
   createProtectedUpload,
@@ -15,9 +15,9 @@ import {
   syncProtectedCaptions,
   captionSyncTarget,
   hasCaptionText,
-} from "./protected-video.js";
-export const adminContent = Router();
-export const adminSourceMedia = Router();
+} from "./protected-video";
+export const adminContent = createEndpoints();
+export const adminSourceMedia = createEndpoints();
 const recordId = (req: Request) => z.string().min(1).parse(req.params.id);
 adminContent.get("/streaming", (_req, res) => {
   res.json({

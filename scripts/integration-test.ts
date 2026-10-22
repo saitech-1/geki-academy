@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { readFile, writeFile } from "node:fs/promises";
 import { randomUUID } from "node:crypto";
-import { db } from "../apps/api/src/db.js";
-import { firebaseAdmin } from "../apps/api/src/auth.js";
+import { db } from "../src/server/db.js";
+import { firebaseAdmin } from "../src/server/auth.js";
 if (
   !process.env.FIREBASE_AUTH_EMULATOR_HOST ||
   !process.env.DATABASE_URL?.includes("127.0.0.1")
 )
   throw new Error("Integration tests must use local services.");
-const base = "http://127.0.0.1:4000/api";
+const base = "http://127.0.0.1:3000/api";
 const checks: string[] = [];
 async function login(email: string, password: string) {
   const r = await fetch(

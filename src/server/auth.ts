@@ -1,11 +1,11 @@
 import { getApps, initializeApp, applicationDefault } from "firebase-admin/app";
 import { getAuth, type DecodedIdToken } from "firebase-admin/auth";
-import type { Request, Response, NextFunction } from "express";
+import type { Request, Response, NextFunction } from "./http";
 import type { User } from "@prisma/client";
-import { config } from "./config.js";
-import { db } from "./db.js";
-import { HttpError } from "./domain.js";
-import { acceptOwnerInvitation } from "./owner-bootstrap.js";
+import { config } from "./config";
+import { db } from "./db";
+import { HttpError } from "./domain";
+import { acceptOwnerInvitation } from "./owner-bootstrap";
 if (!getApps().length)
   initializeApp({
     projectId: config.projectId,
@@ -14,16 +14,6 @@ if (!getApps().length)
       : {}),
   });
 export const firebaseAdmin = getAuth();
-declare global {
-  namespace Express {
-    interface Request {
-      account: User;
-      identity: DecodedIdToken;
-      deviceId?: string;
-      requestId: string;
-    }
-  }
-}
 export async function auth(req: Request, _res: Response, next: NextFunction) {
   try {
     const header = req.headers.authorization;

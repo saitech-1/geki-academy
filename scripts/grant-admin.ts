@@ -1,5 +1,5 @@
-import { db } from "../apps/api/src/db.js";
-import { firebaseAdmin } from "../apps/api/src/auth.js";
+import { db } from "../src/server/db.js";
+import { firebaseAdmin } from "../src/server/auth.js";
 const email = process.argv[process.argv.indexOf("--email") + 1];
 if (!email || !email.includes("@"))
   throw new Error(

@@ -1,87 +1,31 @@
-# Build and release checks
+# CI/CD workflow
 
-## What runs automatically
+GEKI deploys one Next.js application from the repository root. The previous apps/web and apps/api workspaces and Express listener have been removed.
 
-`.github/workflows/ci.yml` runs on pushes, pull requests and manual dispatches.
-It uses Node 24.20.0, the committed npm lockfile, pinned GitHub Actions and
-read-only repository permissions. No production secrets are required.
+## GitHub Actions
 
-The three jobs run independently:
+App checks runs on pushes, pull requests and manual dispatch. It uses Node 24.20.0, the npm lockfile, pinned Actions, read-only repository access, timeouts and cancellation of superseded runs.
 
-- `Typecheck, unit tests and production build` generates Prisma, checks both
-  applications, runs unit tests and compiles the production Next.js app.
-- `Isolated web workspace production build` installs only the web workspace
-  and its dependencies, excluding root development dependencies, then compiles
-  Next.js. This catches undeclared web build tools that a full repository
-  installation can hide.
-- `Auth, paid access and QR payment regression tests` provisions disposable
-  PostgreSQL, applies all migrations and database security, starts Firebase's
-  Auth Emulator and the Express API, then runs the existing API and payment
-  tests. These include paid-video access, device limits, quiz grading, receipt
-  privacy, duplicate evidence, manual approval and revoked access.
+1. **Typecheck, unit tests and production build** installs locked build dependencies, generates Prisma, typechecks the full app, runs unit tests and builds Next.js. Static builds do not need production database credentials: API modules load at request time.
+2. **Auth, paid access and QR payment regression tests** provisions PostgreSQL and Firebase Auth Emulator, applies all existing migrations and database security, and starts Next.js on port 3000. Existing API/payment tests call the real Next.js Route Handler. Test identities, receipts and orders remain isolated from live services.
+3. **Release gate** fails if either dependency fails, is skipped or cancelled.
 
-`Release gate` succeeds only when all three jobs succeed. A failed, cancelled or
-skipped dependency fails the gate. Production data, video-provider credentials
-and real payment transactions are never used by these tests. Provider contract
-unit tests use mocked responses; they do not prove live DRM or banking works.
+The old isolated web-workspace check is no longer needed: the root manifest now owns the compiler, browser and server dependencies together.
 
-## Connect the gate to continuous deployment
+## Release settings
 
-A passing GitHub job alone does **not** prevent Vercel from releasing a Git
-deployment. Complete these settings after the workflow is pushed and has run:
+- Vercel Root Directory: blank/repository root. Framework: Next.js. Install: npm ci --include=dev. Build: npm run build. One deployment serves pages and /api/\*.
+- Select Release gate under Vercel Settings → Build and Deployment → Deployment Checks → GitHub, if available in the team's plan.
+- Protect main with a pull-request rule and required Release gate status. Ensure administrator bypass rules match the intended policy.
+- Keep production domain auto-assignment enabled when Deployment Checks gate assignment. Do not force-promote failed checks.
+- Git integration handles previews and production. No Vercel deployment token is stored in this workflow.
+- Configure production values only in Vercel settings. Do not copy live credentials into CI or Preview. Browser Firebase values require rebuilding; server secrets remain unprefixed.
+- Apply reviewed database migrations separately using the migrator role. Do not run destructive migrations or seeds automatically at build time.
 
-1. In GitHub repository settings, protect `main` with a ruleset requiring a
-   pull request and the `Release gate` status check. Apply it to administrators
-   too if direct administrator pushes must be blocked.
-2. In the Vercel project, open **Settings → Build and Deployment → Deployment
-   Checks**, select GitHub, and require `Release gate` for production. Keep
-   production domain auto-assignment enabled; Vercel holds assignment until
-   the required check passes. Do not force-promote a failed check.
-3. Retain Vercel's Git integration for preview and production builds. No Vercel
-   deployment token needs to be stored in this CI workflow.
+These repository files do not configure branch protection or required Vercel checks by themselves. Confirm those account settings independently. Cloud private uploads remain blocked until durable direct-upload storage is configured; a green build is not proof of the complete paid checkout experience.
 
-Account settings have not been changed by adding these files. Access to the
-Vercel team's detailed logs and settings is currently denied by the connected
-account. Check availability of Deployment Checks in the team's plan; if they
-are unavailable, keep production promotion manual until the equivalent release
-gate can be configured. Do not assume branch protection blocks direct pushes
-unless the repository ruleset is actually enabled.
+## Local checks
+
+Run npm run build:verified. Integration tests require a loopback database named geki_ci, FIREBASE_AUTH_EMULATOR_HOST=127.0.0.1:9099, FIREBASE_PROJECT_ID=demo-geki-academy, MEDIA_MODE=local, NODE_ENV=test, HOST=127.0.0.1, PORT=3000 and UPLOAD_DIR=.local/ci-uploads. Run migrations, then firebase emulators:exec --only auth --project demo-geki-academy "npm run test:ci". The harness seeds test accounts, starts Next.js and stops it afterward.
 
 Reference: https://vercel.com/docs/deployment-checks
-
-## The TypeScript build failure
-
-The reported TS5102 error comes from `baseUrl` in `apps/web/tsconfig.json`.
-It has been removed; `@/*` still maps explicitly to `./src/*` through `paths`.
-TypeScript build checks remain enabled.
-
-The repository-root `vercel.json` uses `npm ci --include=dev`, keeping the
-lockfile authoritative and ensuring the pinned TypeScript/build tools are
-installed even when the environment otherwise omits development dependencies.
-Do not override this with an install command that omits them.
-
-The web workspace also declares `typescript@5.9.3` and `@types/node` directly.
-`apps/web/vercel.json` repeats the explicit install rule for Vercel projects
-whose Root Directory is `apps/web`, where the repository-root configuration
-does not apply. These settings cover dependency installation only; selecting
-`apps/web` deploys the frontend and does not automatically host Express.
-
-To reproduce the compile checks locally:
-
-```sh
-npm ci --include=dev
-npm run build:verified
-```
-
-CI itself starts with a clean checkout and no `.env` files. Its Firebase values
-are public placeholders for compilation only. Real Vercel deployments still
-need the project's public Firebase web configuration; never set the Auth
-Emulator URL in production.
-
-## Hosting work still required
-
-This change adds build checks and the reported TypeScript fix. It does not
-finish hosting the Express API, move local source uploads/payment receipts to
-persistent private storage, configure production credentials, or authorize the
-production domain in Firebase. Keep those items in the deployment checklist;
-a green frontend build does not establish that the full app is ready to launch.

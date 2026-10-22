@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile, stat } from "node:fs/promises";
 import { resolve } from "node:path";
-import { config } from "../apps/api/src/config.js";
+import { config } from "../src/server/config.js";
 if (
   config.production ||
   process.env.FIREBASE_AUTH_EMULATOR_HOST !== "127.0.0.1:9099"

@@ -1,5 +1,5 @@
-import { db } from "../apps/api/src/db.js";
-import { firebaseAdmin } from "../apps/api/src/auth.js";
+import { db } from "../src/server/db.js";
+import { firebaseAdmin } from "../src/server/auth.js";
 if (
   process.env.FIREBASE_AUTH_EMULATOR_HOST !== "127.0.0.1:9099" ||
   !process.env.DATABASE_URL?.includes("127.0.0.1")

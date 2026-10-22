@@ -8,7 +8,7 @@ export function firebaseAuth() {
   const projectId = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
   if (!apiKey || !projectId)
     throw new Error(
-      "Firebase configuration is missing. See apps/web/.env.example.",
+      "Firebase configuration is missing. See .env.example.",
     );
   const app = getApps().length
     ? getApp()

@@ -1,7 +1,7 @@
 import { copyFile, mkdir, access } from "node:fs/promises";
 for (const [source, target] of [
   [".env.example", ".env"],
-  ["apps/web/.env.example", "apps/web/.env.local"],
+
 ]) {
   try {
     await access(target!);

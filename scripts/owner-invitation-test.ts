@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
-import { db } from "../apps/api/src/db.js";
-import { acceptOwnerInvitation } from "../apps/api/src/owner-bootstrap.js";
+import { db } from "../src/server/db.js";
+import { acceptOwnerInvitation } from "../src/server/owner-bootstrap.js";
 if (
   !process.env.DATABASE_URL?.includes("127.0.0.1") ||
   process.env.FIREBASE_AUTH_EMULATOR_HOST !== "127.0.0.1:9099"

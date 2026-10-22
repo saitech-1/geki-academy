@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { reminderFor } from "./reminders.js";
+import { reminderFor } from "./reminders";
 const now = new Date("2026-10-20T12:00:00Z");
 const period = (days: number) => ({
   id: String(days),

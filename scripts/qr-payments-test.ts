@@ -1,15 +1,15 @@
 import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { readFile, writeFile } from "node:fs/promises";
-import { db } from "../apps/api/src/db.js";
-import { config } from "../apps/api/src/config.js";
-import { firebaseAdmin } from "../apps/api/src/auth.js";
+import { db } from "../src/server/db.js";
+import { config } from "../src/server/config.js";
+import { firebaseAdmin } from "../src/server/auth.js";
 if (
   process.env.FIREBASE_AUTH_EMULATOR_HOST !== "127.0.0.1:9099" ||
   !config.databaseUrl.includes("127.0.0.1")
 )
   throw Error("Local services only.");
-const base = "http://127.0.0.1:4000/api";
+const base = "http://127.0.0.1:3000/api";
 async function login(email: string) {
   const data = (await fetch(
     "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=local",
@@ -110,7 +110,7 @@ try {
   );
   assert.equal((await call("/admin/payment-orders", a.token)).status, 403);
   const bytes = Buffer.concat([
-    await readFile("apps/web/public/images/hero.jpg"),
+    await readFile("public/images/hero.jpg"),
     Buffer.from("test-fixture-" + randomUUID()),
   ]);
   const txid = "KBZTEST" + Date.now();
