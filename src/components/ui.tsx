@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import Image from "next/image";
 import { useEffect, useRef, useState, useId, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -60,7 +61,14 @@ export function Icon({ name }: { name: keyof typeof icons }) {
 export function Logo() {
   return (
     <Link href="/" className="logo" aria-label="GEKI Academy home">
-      <span className="seal">極</span>
+      <Image
+        className="brand-symbol"
+        src="/brand/geki-symbol-light.svg"
+        width={145}
+        height={125}
+        alt=""
+        aria-hidden="true"
+      />
       <span className="logotype">
         GEKI<small>ACADEMY</small>
       </span>

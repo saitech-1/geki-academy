@@ -428,16 +428,11 @@ hr {
   gap: 10px;
   flex-shrink: 0;
 }
-.seal {
-  width: 32px;
-  height: 32px;
-  display: grid;
-  place-items: center;
-  background: var(--red);
-  font-family: "Noto Sans JP", sans-serif;
-  font-size: 19px;
-  font-weight: 700;
-  transform: rotate(-3deg);
+.brand-symbol {
+  display: block;
+  width: 50px;
+  height: auto;
+  flex-shrink: 0;
 }
 .logotype {
   font-size: 22px;
