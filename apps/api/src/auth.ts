@@ -93,7 +93,6 @@ export async function courseAccess(req: Request, courseId: string) {
       "EMAIL_UNVERIFIED",
       "Verify your email before accessing paid lessons.",
     );
-  if (req.account.role !== "STUDENT") return;
   if (!req.account.onboarded)
     throw new HttpError(
       403,
@@ -115,15 +114,12 @@ export async function ticketCourseAccess(userId: string, courseId: string) {
   const user = await db.user.findUnique({
     where: { id: userId },
     select: {
-      role: true,
       suspended: true,
       onboarded: true,
       purchases: { where: { courseId, revokedAt: null }, select: { id: true } },
     },
   });
   return (
-    !!user &&
-    !user.suspended &&
-    (user.role !== "STUDENT" || (user.onboarded && user.purchases.length > 0))
+    !!user && !user.suspended && user.onboarded && user.purchases.length > 0
   );
 }

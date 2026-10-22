@@ -34,7 +34,8 @@
     "db:migrate:live": "node --env-file=.env.migrations.local node_modules/prisma/build/index.js migrate deploy && node --env-file=.env.migrations.local --import tsx scripts/secure-database.ts",
     "start:reminders:live": "node --env-file=.env.production.local --import tsx scripts/membership-reminders.ts",
     "start:api:live": "node --env-file=.env.production.local --import tsx apps/api/src/index.ts",
-    "start:web:live": "npm run start -w @geki/web -- --port 3000"
+    "start:web:live": "npm run start -w @geki/web -- --port 3000",
+    "test:payments": "tsx scripts/qr-payments-test.ts"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",

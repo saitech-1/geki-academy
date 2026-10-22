@@ -9,6 +9,7 @@ export const ReasonInput = z.object({
   reason: z.string().trim().min(8).max(500),
 });
 export const CourseInput = z.object({
+  kbzPayEnabled: z.boolean().default(false),
   priceMinor: z.number().int().min(1).max(2000000000).nullable().default(null),
   currency: z.enum(["MMK", "USD"]).default("MMK"),
   title: z.string().trim().min(3).max(150),

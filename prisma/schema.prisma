@@ -32,6 +32,7 @@ model User {
   onboarded Boolean @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  paymentOrders PaymentOrder[]
   purchases CoursePurchase[]
   memberships Membership[]
   devices Device[]
@@ -70,8 +71,10 @@ model Course {
   status ContentStatus @default(DRAFT)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  kbzPayEnabled Boolean @default(false)
   priceMinor Int?
   currency String @default("MMK")
+  paymentOrders PaymentOrder[]
   purchases CoursePurchase[]
   sections Section[]
   quiz Quiz?
@@ -267,6 +270,34 @@ model CoursePurchase {
   purchasedAt DateTime @default(now())
   revokedAt DateTime?
   @@unique([userId, courseId])
+  @@index([courseId])
+  @@schema("geki")
+}
+
+model PaymentOrder {
+  id String @id @default(cuid())
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Restrict)
+  courseId String
+  course Course @relation(fields:[courseId],references:[id],onDelete:Restrict)
+  amountMinor Int
+  currency String @default("MMK")
+  status String @default("AWAITING_PAYMENT")
+  transactionId String? @unique
+  proofSha String? @unique
+  proofPath String?
+  proofMime String?
+  submissions Int @default(0)
+  submittedAt DateTime?
+  reviewedAt DateTime?
+  reviewerId String?
+  reviewReason String?
+  qrImage String
+  recipient String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId,courseId])
+  @@index([status,createdAt])
   @@index([courseId])
   @@schema("geki")
 }

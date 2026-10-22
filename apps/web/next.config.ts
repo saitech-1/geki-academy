@@ -6,6 +6,13 @@ const nextConfig: NextConfig = {
     proxyTimeout: 30 * 60 * 1000,
   },
   transpilePackages: ["@geki/contracts"],
+  async redirects() {
+    return ["/pricing", "/library", "/checkout"].map((source) => ({
+      source,
+      destination: "/courses",
+      permanent: true,
+    }));
+  },
   async rewrites() {
     return [
       {

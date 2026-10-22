@@ -42,6 +42,17 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   return data as T;
 }
 export const json = (value: unknown) => JSON.stringify(value);
+export async function apiBlob(path: string, signal?: AbortSignal) {
+  const user = firebaseAuth().currentUser;
+  const response = await fetch("/api" + path, {
+    headers: user ? { Authorization: `Bearer ${await user.getIdToken()}` } : {},
+    cache: "no-store",
+    signal,
+  });
+  if (!response.ok)
+    throw new Error("The receipt could not be loaded. Refresh and try again.");
+  return response.blob();
+}
 export async function uploadVideo<T>(
   path: string,
   file: File,

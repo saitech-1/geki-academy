@@ -8,6 +8,7 @@ export type Lesson = {
   video: { duration: number };
 };
 export type Course = {
+  kbzPayEnabled: boolean;
   priceMinor: number | null;
   currency: string;
   id: string;

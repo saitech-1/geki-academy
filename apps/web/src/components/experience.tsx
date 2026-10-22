@@ -1,11 +1,5 @@
 "use client";
-import {
-  Home,
-  Library,
-  CourseDetail,
-  Pricing,
-  CourseCheckout,
-} from "./catalog";
+import { Home, Library, CourseDetail, CourseCheckout } from "./catalog";
 import { AuthPage } from "./auth-pages";
 import { AppShell, PublicLayout } from "./shell";
 import {
@@ -23,7 +17,9 @@ import {
   AdminStudents,
   AdminAudit,
 } from "./admin";
-import { Heading, Button, Message, Empty } from "./ui";
+import { Button, Empty, Loading } from "./ui";
+import { useAuth } from "./providers";
+import { AdminPaymentReviews } from "./qr-payments";
 export function Experience({ route }: { route: string }) {
   if (route === "/") return <Home />;
   if (
@@ -37,8 +33,7 @@ export function Experience({ route }: { route: string }) {
     ].includes(route)
   )
     return <AuthPage key={route} route={route} />;
-  if (route === "/library") return <Library />;
-  if (route === "/pricing") return <Pricing />;
+  if (route === "/courses") return <Library />;
   if (route.startsWith("/courses/"))
     return <CourseDetail key={route} slug={route.split("/")[2]!} />;
   if (route === "/preview" || route.startsWith("/preview/"))
@@ -48,11 +43,7 @@ export function Experience({ route }: { route: string }) {
       </PublicLayout>
     );
   if (route.startsWith("/lessons/"))
-    return (
-      <AppShell route={route}>
-        <LessonPage key={route} lessonId={route.split("/")[2]!} />
-      </AppShell>
-    );
+    return <LessonRoute lessonId={route.split("/")[2]!} route={route} />;
   if (route.startsWith("/quizzes/"))
     return (
       <AppShell route={route}>
@@ -61,7 +52,6 @@ export function Experience({ route }: { route: string }) {
     );
   if (route.startsWith("/checkout/"))
     return <CourseCheckout slug={route.split("/")[2]!} />;
-  if (route === "/checkout") return <Pricing />;
   if (route === "/dashboard" || route === "/my-learning")
     return (
       <AppShell route={route}>
@@ -92,6 +82,8 @@ export function Experience({ route }: { route: string }) {
         <CourseEditor courseId={route.split("/")[3]!} />
       ) : route === "/admin/videos" ? (
         <AdminVideos />
+      ) : route === "/admin/payments" ? (
+        <AdminPaymentReviews />
       ) : route === "/admin/students" ? (
         <AdminStudents />
       ) : route === "/admin/audit" ? (
@@ -111,5 +103,21 @@ export function Experience({ route }: { route: string }) {
         <Button href="/">Return home</Button>
       </Empty>
     </PublicLayout>
+  );
+}
+
+function LessonRoute({ lessonId, route }: { lessonId: string; route: string }) {
+  const { account, loading } = useAuth();
+  if (loading)
+    return (
+      <PublicLayout>
+        <Loading />
+      </PublicLayout>
+    );
+  const lesson = <LessonPage key={route} lessonId={lessonId} />;
+  return account ? (
+    <AppShell route={route}>{lesson}</AppShell>
+  ) : (
+    <PublicLayout>{lesson}</PublicLayout>
   );
 }

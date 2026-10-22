@@ -3927,3 +3927,137 @@ html[lang="my"] .sidebar-nav {
     animation: none;
   }
 }
+
+.qr-checkout-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+  gap: 28px;
+  align-items: start;
+  margin-bottom: 60px;
+}
+.payment-total {
+  font-size: clamp(28px, 3vw, 42px);
+  font-weight: 650;
+  letter-spacing: -0.04em;
+  color: var(--text, #f5f4f0);
+}
+.qr-payment-panel {
+  background: linear-gradient(145deg, #191b20, #121212 75%);
+}
+.payment-qr {
+  display: block;
+  width: min(100%, 340px);
+  height: auto;
+  margin: 8px auto;
+  border-radius: 14px;
+  background: #fff;
+}
+.payment-steps {
+  display: grid;
+  gap: 14px;
+  padding-left: 23px;
+  color: #c4c4c4;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.payment-receipt {
+  display: block;
+  width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  background: #0a0a0a;
+  border: 1px solid #303030;
+  border-radius: 12px;
+}
+.block {
+  display: block;
+}
+.qr-checkout-grid input[type="file"] {
+  width: 100%;
+  min-width: 0;
+  font-size: 13px;
+}
+@media (max-width: 850px) {
+  .qr-checkout-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 18px;
+  }
+  .qr-payment-panel {
+    order: -1;
+  }
+  .payment-qr {
+    width: min(100%, 280px);
+  }
+}
+
+.video-box.lesson-paywall {
+  aspect-ratio: auto;
+  min-height: 440px;
+  display: grid;
+  align-items: center;
+  padding: 40px;
+  background: #131313;
+  border: 1px solid #353030;
+}
+.lesson-paywall > img {
+  position: absolute;
+  inset: 0;
+  opacity: 0.18;
+  filter: grayscale(1) brightness(0.55);
+}
+.lesson-lock-content {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  gap: 17px;
+  max-width: 530px;
+}
+.lesson-lock-symbol {
+  display: grid;
+  place-items: center;
+  height: 48px;
+  width: 48px;
+  border: 1px solid #8a383f;
+  border-radius: 15px;
+  background: #d719201f;
+  color: #ffb6ba;
+}
+.lesson-lock-content h2 {
+  font-size: clamp(28px, 3.4vw, 40px);
+  letter-spacing: -0.04em;
+  line-height: 1.12;
+}
+.lesson-lock-content p {
+  max-width: 470px;
+  color: #c2baba;
+  font-size: 14px;
+  line-height: 1.7;
+}
+.lesson-lock-content small {
+  color: #aaa0a0;
+  font-size: 12px;
+  line-height: 1.65;
+}
+.lesson-lock-price {
+  font-size: 24px;
+  letter-spacing: -0.02em;
+}
+.lesson-lock-price small {
+  font-weight: 400;
+  margin-left: 8px;
+}
+.lesson-paywall .player-top {
+  display: none;
+}
+@media (max-width: 600px) {
+  .video-box.lesson-paywall {
+    padding: 26px 22px;
+    min-height: 480px;
+  }
+  .lesson-lock-content .row {
+    align-items: stretch;
+  }
+  .lesson-lock-content .btn {
+    flex: 1 1 180px;
+  }
+}

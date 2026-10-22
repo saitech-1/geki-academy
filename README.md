@@ -6,9 +6,9 @@ A working Next.js web application, Express REST API, PostgreSQL/Prisma database 
 
 GEKI sells individual course packages through one-time purchases with ongoing access. A purchase unlocks only that course's lessons and quiz. No monthly/annual subscriptions are offered. The first Kihon preview remains public. Existing membership records are retained as historical data and no longer grant access; expiry reminders are disabled.
 
-Set each course's approved price and currency in **Admin → Courses**. Online payment integration remains unconfigured. For a payment collected through an agreed external method, use **Admin → Students → Confirm paid course purchase**, select the course, enter the verified payment reference and audit reason. This records the paid amount/currency snapshot and unlocks the course; it does not charge the customer. Never confirm payment without verifying receipt. Payment references are unique, retries are idempotent, and access can be revoked per course. Purchased courses cannot be permanently deleted.
+Set each course's approved price, currency and QR availability in **Admin → Courses**. For uploaded QR receipts, use **Admin → Payment Reviews** to verify the transaction and approve or request correction. KBZPay QR checkout is enabled for the Geki Kihon Package at 50,000 MMK with manual incoming-transfer verification. For a payment collected through an agreed external method, use **Admin → Students → Confirm paid course purchase**, select the course, enter the verified payment reference and audit reason. This records the paid amount/currency snapshot and unlocks the course; it does not charge the customer. Never confirm payment without verifying receipt. Payment references are unique, retries are idempotent, and access can be revoked per course. Purchased courses cannot be permanently deleted.
 
-**My Courses** lists purchase receipts and ongoing access. Browser routes `/pricing` and `/checkout/:courseSlug` show individual packages and order summaries. `/membership` remains a compatibility alias for My Courses. The new `CoursePurchase` table is private and protected by RLS, with access enforced by Express/Firebase. Run the new Prisma migration before starting an updated API.
+**My Courses** lists purchase receipts and ongoing access. `/courses` lists all courses, `/courses/:slug` shows course details, and `/checkout/:courseSlug` handles that course's fee. `/membership` remains a compatibility alias for My Courses. The new `CoursePurchase` table is private and protected by RLS, with access enforced by Express/Firebase. Run the new Prisma migration before starting an updated API.
 
 ## Run locally
 
@@ -61,7 +61,7 @@ Windows embedded PostgreSQL uses `.local/postgres`, port 5433 and a UTF-8 databa
 
 ## Live Supabase and Firebase configuration
 
-The new Supabase project is **geki-academy**, `msrvghakwqyjwwjcravk`, in the GEKI organization, Singapore. [Open the project](https://supabase.com/dashboard/project/msrvghakwqyjwwjcravk). Its private `geki` schema contains 19 application tables. Firebase remains the identity provider; Supabase Auth is not used.
+The new Supabase project is **geki-academy**, `msrvghakwqyjwwjcravk`, in the GEKI organization, Singapore. [Open the project](https://supabase.com/dashboard/project/msrvghakwqyjwwjcravk). Its private `geki` schema contains 20 application tables. Firebase remains the identity provider; Supabase Auth is not used.
 
 The server-only runtime login `geki_api` has application-table CRUD access and no schema migration privileges. Its random password is stored in the ignored `.env.production.local`. Data API roles have no schema access; all application tables have RLS and restrictive deny policies. Express performs per-user authorization using Firebase ID tokens. Never expose the database URL to a browser.
 
@@ -150,3 +150,27 @@ This is a functional development application with a connected cloud database, **
 
 See [PROTECTED_STREAMING.md](PROTECTED_STREAMING.md) for VdoCipher account connection, saved-source transfer, processing checks, subtitle sync, publication requirements and recovery. Live provider credentials and a real DRM playback test are still required. The web proxy now permits 500 MiB source uploads plus multipart overhead.
 
+
+## KBZPay QR payments
+
+The supplied QR is copied unchanged to a versioned public image asset. Kihon checkout is 50,000 MMK (5,000,000 minor units); the backend locks the amount and recipient when creating a payment order. Students must be signed in, email-verified and onboarded. They pay in KBZPay and upload a JPEG/PNG receipt (maximum 5 MB) plus the successful transaction ID.
+
+Orders progress from `AWAITING_PAYMENT` to `SUBMITTED`, then an admin sets `APPROVED` or `REJECTED`. A rejected order can be corrected and resubmitted. Pending requests appear in My Courses and survive reloads. Pending status refreshes while the checkout tab is visible. In-app notifications record approval or correction requests.
+
+**Verification is manual:** open the receiving KBZPay account and find the successful incoming transfer. Match transaction ID, amount and recipient against the request; compare the receipt and sender details as needed. A screenshot or a student saying “paid” is not proof of settlement. Approval requires the admin's explicit verification checkbox and an audit reason. Approval and the permanent course purchase are committed in one transaction. Repeated approval does not duplicate a purchase or reinstate a later-revoked purchase.
+
+The static personal QR does not supply authenticated settlement callbacks or a bank inquiry API. Automated bank verification is not implemented. A future merchant integration must use provider-issued credentials and verified server callbacks/inquiries; do not add a fake webhook or trust client-supplied payment success.
+
+Receipts are stored under the private persistent `UPLOAD_DIR/payment-proofs` folder, outside public web assets. Only the submitting learner and verified admins can fetch them with Firebase authentication; image responses are private/no-store. Do not make this directory public. Original/replaced proofs remain private for dispute/audit history; define a retention policy before production rollout. This implementation does not send financial receipts to AI/OCR services. Each account has ten receipt-upload attempts per hour, with at most five accepted submissions per order. Repeatedly rejected orders require GEKI support.
+
+Transactions and receipt hashes are unique across orders to stop straightforward reuse. This is not an authenticity check; the admin still verifies the incoming funds. Payment orders and purchases protect course deletion, retain the charged-price snapshot, and are isolated in the private RLS-protected application schema.
+
+Tests: run `npm run test:payments` with local PostgreSQL, Auth Emulator and API running. Then `TEST_WEB_URL=http://127.0.0.1:3002 node scripts/qr-payments-browser.cjs` against the local test web server (set the environment variable using your shell syntax). Tests use explicitly artificial local receipts; no real KBZPay transfer is initiated.
+
+## Unified courses and locked lessons
+
+`/courses` is the only public course listing. The separate package/pricing presentation has been removed; old `/pricing`, `/library` and bare `/checkout` bookmarks redirect to `/courses`. Each course detail links to its own payment checkout at `/checkout/:courseSlug`.
+
+Non-preview lessons show a locked view for guests and students without an active purchase for that specific course. The lock links directly to that course's fee/QR checkout. Preview lessons remain available without purchase. Administrator roles do not bypass learner purchase checks. Private admin source previews remain available in video management; server-side playback/quiz authorization remains authoritative. A `/preview/:id` URL does not turn a paid lesson into a preview.
+
+Local browser verification: after running the integration fixtures, set `TEST_WEB_URL` to your local emulator web server and run `node scripts/locked-lessons-browser.cjs`. It verifies guest/unpaid locks, no video request from the locked screen, public previews, purchased playback, redirects and mobile layout.

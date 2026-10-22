@@ -29,6 +29,7 @@ import {
   captionSyncTarget,
   hasCaptionText,
 } from "./protected-video.js";
+import { qrCheckout, learnerPayments, adminPayments } from "./qr-payments.js";
 const app = express();
 app.disable("x-powered-by");
 app.set("query parser", "simple");
@@ -758,7 +759,7 @@ app.get("/api/admin/overview", async (_req, res) => {
     courses,
     queue,
     mediaMode: config.mediaMode,
-    paymentConfigured: false,
+    paymentConfigured: true,
   });
 });
 app.get("/api/admin/courses", async (_req, res) =>
@@ -1404,7 +1405,8 @@ app.get("/api/admin/audit", async (_req, res) =>
 );
 app.get("/api/commerce", async (_req, res) =>
   res.json({
-    configured: false,
+    configured: true,
+    method: "KBZPAY_QR_MANUAL_REVIEW",
     model: "COURSE_PURCHASE",
     courses: await db.course.findMany({
       where: { status: "PUBLISHED" },
@@ -1414,33 +1416,14 @@ app.get("/api/commerce", async (_req, res) =>
         title: true,
         priceMinor: true,
         currency: true,
+        kbzPayEnabled: true,
       },
     }),
   }),
 );
-app.post("/api/checkout", auth, async (req, res) => {
-  const { courseId } = z
-    .object({ courseId: z.string().min(1) })
-    .parse(req.body);
-  const course = await db.course.findFirst({
-    where: { id: courseId, status: "PUBLISHED" },
-  });
-  requireCondition(course, 404, "NOT_FOUND", "Course unavailable.");
-  const owned = await db.coursePurchase.findUnique({
-    where: { userId_courseId: { userId: req.account.id, courseId } },
-  });
-  requireCondition(
-    !owned || owned.revokedAt,
-    409,
-    "ALREADY_PURCHASED",
-    "You already own this course. Open it in My Courses.",
-  );
-  throw new HttpError(
-    503,
-    "PAYMENTS_NOT_CONFIGURED",
-    "Online payments are not connected yet. Contact GEKI to arrange payment for this course. Only confirmed payment unlocks access.",
-  );
-});
+app.use("/api/checkout", auth, accountLimit, qrCheckout);
+app.use("/api/me/payment-orders", learnerPayments);
+app.use("/api/admin/payment-orders", adminPayments);
 app.use((_req, _res) => {
   throw new HttpError(404, "NOT_FOUND", "Endpoint not found.");
 });

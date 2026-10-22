@@ -8,7 +8,7 @@ import { Logo, Icon, Button, Loading, Message, Modal, type icons } from "./ui";
 const studentNav = [
   ["/dashboard", "home", "Overview"],
   ["/my-learning", "book", "My Learning"],
-  ["/library", "grid", "Course Library"],
+  ["/courses", "grid", "Course Library"],
   ["/purchases", "card", "My Courses"],
   ["/devices", "devices", "My Devices"],
   ["/notifications", "bell", "Notifications"],
@@ -18,6 +18,7 @@ const adminNav = [
   ["/admin", "grid", "Overview"],
   ["/admin/courses", "book", "Courses"],
   ["/admin/videos", "film", "Videos & Subtitles"],
+  ["/admin/payments", "card", "Payment Reviews"],
   ["/admin/students", "users", "Students & Purchases"],
   ["/admin/audit", "shield", "Roles & Audit"],
 ] as const;
@@ -31,9 +32,8 @@ export function PublicNav() {
         <Logo />
         <div className="nav-links">
           <Link href="/">{t("Home")}</Link>
-          <Link href="/library">{t("Courses")}</Link>
+          <Link href="/courses">{t("Courses")}</Link>
           <Link href="/#about">{t("About GEKI")}</Link>
-          <Link href="/pricing">{t("Course Packages")}</Link>
         </div>
         <div className="nav-actions">
           <LanguageSelector />
@@ -65,8 +65,7 @@ export function PublicNav() {
           <div className="stack">
             {[
               ["/", "Home"],
-              ["/library", "Courses"],
-              ["/pricing", "Course Packages"],
+              ["/courses", "Courses"],
               [
                 account ? "/dashboard" : "/signin",
                 account ? "My Academy" : "Sign in",
@@ -95,8 +94,7 @@ export function Footer() {
       <div className="footer-top">
         <Logo />
         <div className="footer-links">
-          <Link href="/library">{t("Courses")}</Link>
-          <Link href="/pricing">{t("Course Packages")}</Link>
+          <Link href="/courses">{t("Courses")}</Link>
           <Link href="/preview">{t("Free lesson")}</Link>
           <Link href="/recovery">{t("Account help")}</Link>
         </div>

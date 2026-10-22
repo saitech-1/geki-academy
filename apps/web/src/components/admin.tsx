@@ -97,7 +97,7 @@ export function AdminOverview() {
               <h3>Service configuration</h3>
               <p>Media mode: {data.mediaMode}</p>
               <Message>
-                Payments are not configured. Course purchases are verified,
+                KBZPay QR payments require manual verification. Purchases are
                 audited admin actions.
               </Message>
             </div>
@@ -322,12 +322,24 @@ export function CourseEditor({ courseId }: { courseId: string }) {
                     ? Math.round(Number(f.get("price")) * 100)
                     : null,
                   currency: f.get("currency"),
+                  kbzPayEnabled: f.get("kbzPayEnabled") === "on",
                 },
                 "PATCH",
               );
             }}
           >
             <h3>Course details</h3>
+            <label className="consent">
+              <input
+                name="kbzPayEnabled"
+                type="checkbox"
+                defaultChecked={c.kbzPayEnabled}
+              />
+              <span>
+                Enable KBZPay QR checkout (MMK only, admin verification
+                required)
+              </span>
+            </label>
             <label>
               Course price
               <input

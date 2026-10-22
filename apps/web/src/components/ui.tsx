@@ -26,8 +26,10 @@ import {
   Upload,
   ChevronDown,
   CircleAlert,
+  LockKeyhole,
 } from "lucide-react";
 export const icons = {
+  lock: LockKeyhole,
   arrow: ArrowRight,
   up: ArrowUpRight,
   book: BookOpen,

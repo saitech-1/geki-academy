@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { PendingPayments } from "./qr-payments";
 import type {
   Course,
   Dashboard,
@@ -39,10 +40,8 @@ export function DashboardPage({
     account ? "/me/dashboard" : null,
   );
   const { data: allCourses } = useData<Course[]>("/catalog");
-  const courses = allCourses?.filter(
-    (c) =>
-      account?.role !== "STUDENT" ||
-      account?.purchases.some((p) => p.courseId === c.id && !p.revokedAt),
+  const courses = allCourses?.filter((c) =>
+    account?.purchases.some((p) => p.courseId === c.id && !p.revokedAt),
   );
   if (loading) return <Loading />;
   if (error) return <Message error>{error}</Message>;
@@ -100,7 +99,7 @@ export function DashboardPage({
           ) : (
             <Empty title="Your practice starts here.">
               <p>Explore an available course and open your first lesson.</p>
-              <Button href="/library">
+              <Button href="/courses">
                 Explore courses <Icon name="arrow" />
               </Button>
             </Empty>
@@ -201,8 +200,12 @@ export function LessonPage({
   lessonId?: string;
   publicPreview?: boolean;
 }) {
-  const { account } = useAuth();
-  const { data: catalog } = useData<Course[]>("/catalog");
+  const { account, loading: authLoading } = useAuth();
+  const {
+    data: catalog,
+    loading: catalogLoading,
+    error: catalogError,
+  } = useData<Course[]>("/catalog");
   const previewLesson = catalog
     ?.flatMap((c) => c.sections.flatMap((s) => s.lessons))
     .find((l) => l.preview);
@@ -221,6 +224,12 @@ export function LessonPage({
   const protectedVideo = useRef<VideoControl | null>(null);
   const session = useRef<Playback | null>(null);
   const currentCourse = catalog?.find((c) => c.id === lesson?.courseId);
+  const canAccessCourse =
+    !!account &&
+    account.purchases.some(
+      (p) => p.courseId === lesson?.courseId && !p.revokedAt,
+    );
+  const locked = !!lesson && !lesson.preview && !canAccessCourse;
   useEffect(() => {
     setPlayback(null);
     session.current = null;
@@ -296,19 +305,12 @@ export function LessonPage({
     };
   }, [playback]);
   async function start(force = false) {
-    if (!selected) return;
+    if (!selected || locked) return;
     setBusy(true);
     setFailure("");
     try {
       let data: Playback;
-      if (
-        account &&
-        (account.role !== "STUDENT" ||
-          account.purchases.some(
-            (p) => p.courseId === lesson?.courseId && !p.revokedAt,
-          )) &&
-        !publicPreview
-      ) {
+      if (canAccessCourse && (!publicPreview || !lesson?.preview)) {
         await api("/me/devices", {
           method: "POST",
           body: json({
@@ -343,13 +345,14 @@ export function LessonPage({
       setBusy(false);
     }
   }
-  if (loading) return <Loading />;
-  if (error) return <Message error>{error}</Message>;
+  if (loading || authLoading || catalogLoading) return <Loading />;
+  if (error || catalogError)
+    return <Message error>{error || catalogError}</Message>;
   if (!lesson)
     return (
       <Empty title="Your first lesson is being prepared.">
         <p>GEKI will publish the free Kihon video after content review.</p>
-        <Button href="/library">Browse courses</Button>
+        <Button href="/courses">Browse courses</Button>
       </Empty>
     );
   const lessons = currentCourse?.sections.flatMap((s) => s.lessons) || [];
@@ -367,8 +370,66 @@ export function LessonPage({
             </Link>
             {lesson.preview ? <Badge tone="free">Free preview</Badge> : null}
           </div>
-          <div className="video-box">
-            {playback?.kind === "local" ? (
+          <div className={`video-box ${locked ? "lesson-paywall" : ""}`}>
+            {locked ? (
+              <>
+                <img
+                  src={currentCourse?.thumbnail || "/images/hero.jpg"}
+                  alt=""
+                  aria-hidden="true"
+                />
+                <section
+                  className="lesson-lock-content"
+                  aria-label="Locked lesson"
+                >
+                  <span className="lesson-lock-symbol">
+                    <Icon name="lock" />
+                  </span>
+                  <Badge>COURSE PURCHASE REQUIRED</Badge>
+                  <h2>Unlock your next lesson.</h2>
+                  <p>
+                    Pay the course fee for{" "}
+                    <strong>{currentCourse?.title || "this course"}</strong> to
+                    access this lesson and the full course.
+                  </p>
+                  {currentCourse?.priceMinor ? (
+                    <strong className="lesson-lock-price">
+                      {new Intl.NumberFormat("en", {
+                        style: "currency",
+                        currency: currentCourse.currency,
+                        maximumFractionDigits: 0,
+                      }).format(currentCourse.priceMinor / 100)}{" "}
+                      <small>one-time payment</small>
+                    </strong>
+                  ) : null}
+                  <div className="row wrap">
+                    <Button
+                      href={
+                        currentCourse
+                          ? "/checkout/" + currentCourse.slug
+                          : "/courses"
+                      }
+                    >
+                      Pay course fee <Icon name="arrow" />
+                    </Button>
+                    <Button
+                      secondary
+                      href={
+                        currentCourse
+                          ? "/courses/" + currentCourse.slug
+                          : "/courses"
+                      }
+                    >
+                      View course
+                    </Button>
+                  </div>
+                  <small>
+                    Ongoing course access after payment confirmation. Free
+                    previews stay open.
+                  </small>
+                </section>
+              </>
+            ) : playback?.kind === "local" ? (
               <video
                 ref={video}
                 controls
@@ -506,12 +567,16 @@ export function LessonPage({
                   className={`lesson-row ${l.id === selected ? "current" : ""}`}
                   href={"/lessons/" + l.id}
                 >
-                  <Icon name="play" />
+                  <Icon name={l.preview || canAccessCourse ? "play" : "lock"} />
                   <div className="row-copy">
                     <span>{l.title}</span>
                     <small>
                       {Math.round(l.video.duration / 60)} min{" "}
-                      {l.preview ? "· Free preview" : ""}
+                      {l.preview
+                        ? "· Free preview"
+                        : !canAccessCourse
+                          ? "· Locked"
+                          : ""}
                     </small>
                   </div>
                 </Link>
@@ -746,6 +811,7 @@ export function AccountPage({ route }: { route: string }) {
           title="Your purchased course packages."
           description="One-time purchases. Ongoing access to each course you own."
         />
+        <PendingPayments />
         <div className="grid-3">
           {data?.purchases.map((p) => (
             <div className="panel stack" key={p.id}>
@@ -763,7 +829,7 @@ export function AccountPage({ route }: { route: string }) {
         </div>
         {!data?.purchases.length ? (
           <Empty title="No course purchases yet.">
-            <Button href="/library">Explore courses</Button>
+            <Button href="/courses">Explore courses</Button>
           </Empty>
         ) : null}
       </>

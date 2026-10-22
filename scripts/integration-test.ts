@@ -181,6 +181,8 @@ assert.equal(
   403,
 );
 checks.push("course purchase enforced before playback");
+assert.equal((await call("/me/playback/"+lesson.id,admin,"POST",{},key)).status,403);
+checks.push("Super Admin learner playback also requires a course purchase");
 await db.membership.create({
   data: {
     userId: me.id,
@@ -225,7 +227,7 @@ assert.equal(
 );
 assert.equal(
   (await call("/checkout", student, "POST", { courseId: course.id })).status,
-  503,
+  409,
 );
 
 assert.equal(

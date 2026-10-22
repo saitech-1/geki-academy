@@ -301,7 +301,7 @@ adminContent.delete("/courses/:id", async (req, res) => {
       where: { id: recordId(req) },
       include: {
         quiz: { include: { _count: { select: { attempts: true } } } },
-        _count: { select: { purchases: true } },
+        _count: { select: { purchases: true, paymentOrders: true } },
         sections: { include: { lessons: true } },
       },
     });
@@ -313,7 +313,7 @@ adminContent.delete("/courses/:id", async (req, res) => {
       "This course has student quiz results. Unpublish it to preserve their learning history.",
     );
     requireCondition(
-      !course._count.purchases,
+      !course._count.purchases && !course._count.paymentOrders,
       409,
       "COURSE_HAS_PURCHASES",
       "This course has purchase records. Unpublish it instead to preserve student purchases.",
