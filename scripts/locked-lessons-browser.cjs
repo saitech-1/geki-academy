@@ -5,7 +5,7 @@ const { execFileSync } = require("node:child_process");
 (async () => {
   const base = process.env.TEST_WEB_URL || "http://127.0.0.1:3002";
   assert.equal(
-    (await fetch("http://127.0.0.1:4000/api/health").then((r) => r.json()))
+    (await fetch("http://127.0.0.1:3000/api/health").then((r) => r.json()))
       .authMode,
     "emulator",
   );

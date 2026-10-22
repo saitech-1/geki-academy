@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { config } from "./config.js";
+import { config } from "./config";
 import {
   captionSyncTarget,
   protectedStatus,
@@ -8,7 +8,7 @@ import {
   syncProtectedCaptions,
   createProtectedUpload,
   hasCaptionText,
-} from "./protected-video.js";
+} from "./protected-video";
 
 const originalSecret = config.videoSecret;
 const fetchMock = vi.fn();

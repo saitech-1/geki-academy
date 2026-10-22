@@ -4,15 +4,14 @@
   "private": true,
   "type": "module",
   "workspaces": [
-    "apps/*",
     "packages/*"
   ],
   "engines": {
     "node": ">=24 <25"
   },
   "scripts": {
-    "dev": "concurrently -k -n api,web \"npm run dev -w @geki/api\" \"npm run dev -w @geki/web\"",
-    "dev:all": "concurrently -k -n postgres,auth,api,web \"npm run db:local\" \"npm run auth:emulator\" \"npm run dev -w @geki/api\" \"npm run dev -w @geki/web\"",
+    "dev": "next dev --hostname 127.0.0.1 --port 3000",
+    "dev:all": "concurrently -k -n postgres,auth,app \"npm run db:local\" \"npm run auth:emulator\" \"npm run dev\"",
     "db:local": "tsx scripts/local-postgres.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy && tsx scripts/secure-database.ts",
@@ -20,8 +19,8 @@
     "auth:emulator": "node scripts/auth-emulator.mjs",
     "setup:local": "tsx scripts/setup-local.ts",
     "admin:grant": "tsx scripts/grant-admin.ts",
-    "typecheck": "npm run typecheck --workspaces --if-present",
-    "build": "npm run db:generate && npm run build --workspaces --if-present",
+    "typecheck": "tsc --noEmit",
+    "build": "npm run db:generate && next build",
     "test": "vitest run",
     "test:integration": "tsx scripts/integration-test.ts",
     "test:reminders": "tsx scripts/reminders-integration.ts",
@@ -33,20 +32,31 @@
     "reminders:worker": "tsx scripts/membership-reminders.ts",
     "db:migrate:live": "node --env-file=.env.migrations.local node_modules/prisma/build/index.js migrate deploy && node --env-file=.env.migrations.local --import tsx scripts/secure-database.ts",
     "start:reminders:live": "node --env-file=.env.production.local --import tsx scripts/membership-reminders.ts",
-    "start:api:live": "node --env-file=.env.production.local --import tsx apps/api/src/index.ts",
-    "start:web:live": "npm run start -w @geki/web -- --port 3000",
     "test:payments": "tsx scripts/qr-payments-test.ts",
     "test:ci": "node scripts/ci-integration.mjs",
-    "build:verified": "npm run db:generate && npm run typecheck && npm test && npm run build --workspaces --if-present"
+    "build:verified": "npm run db:generate && npm run typecheck && npm test && next build",
+    "start": "next start --hostname 0.0.0.0 --port 3000",
+    "start:live": "node --env-file=.env.production.local node_modules/next/dist/bin/next start --hostname 0.0.0.0 --port 3000"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
     "dotenv": "17.2.3",
-    "pg": "8.16.3"
+    "pg": "8.16.3",
+    "@geki/contracts": "*",
+    "@tailwindcss/postcss": "4.3.3",
+    "firebase": "13.0.0",
+    "lucide-react": "^0.468.0",
+    "next": "16.4.2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1",
+    "tailwindcss": "4.3.3",
+    "firebase-admin": "14.5.0",
+    "zod": "4.6.7",
+    "busboy": "1.6.0"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0",
+    "@types/node": "^24.19.2",
     "@types/pg": "^8.15.0",
     "concurrently": "^9.2.0",
     "embedded-postgres": "18.4.0-beta.17",
@@ -56,7 +66,10 @@
     "prisma": "7.10.1",
     "tsx": "4.23.15",
     "typescript": "5.9.3",
-    "vitest": "5.0.5"
+    "vitest": "5.0.5",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/busboy": "^1.5.4"
   },
   "optionalDependencies": {
     "@embedded-postgres/windows-x64": "18.4.0-beta.17"

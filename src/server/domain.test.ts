@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { membershipActive, watchedRanges, grade } from "./domain.js";
+import { membershipActive, watchedRanges, grade } from "./domain";
 describe("membership boundary", () => {
   it("denies expired, future and revoked memberships", () => {
     const now = new Date("2026-11-01");

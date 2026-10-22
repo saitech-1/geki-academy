@@ -1,6 +1,6 @@
 # GEKI Academy — Design Deliverable
 
-This folder is an interactive **design prototype**, not the production Next.js/Express application. It preserves the agreed stack and implementation plan by keeping design exploration separate.
+This folder is an interactive **design prototype**, not the production full-stack Next.js application. It preserves the agreed stack and implementation plan by keeping design exploration separate.
 
 ## Review
 

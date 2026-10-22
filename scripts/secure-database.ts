@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 import pg from "pg";
-import { config } from "../apps/api/src/config.js";
+import { config } from "../src/server/config.js";
 const client = new pg.Client({ connectionString: config.databaseUrl });
 try {
   await client.connect();

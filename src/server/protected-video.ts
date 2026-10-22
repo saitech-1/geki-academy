@@ -2,8 +2,8 @@ import { openAsBlob } from "node:fs";
 import { createHash } from "node:crypto";
 import { resolve, sep, basename } from "node:path";
 import { z } from "zod";
-import { config } from "./config.js";
-import { HttpError, requireCondition } from "./domain.js";
+import { config } from "./config";
+import { HttpError, requireCondition } from "./domain";
 
 const base = "https://dev.vdocipher.com/api/videos";
 export function hasCaptionText(content: string) {

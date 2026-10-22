@@ -2,14 +2,14 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { resolve } from "node:path";
-import { db } from "../apps/api/src/db.js";
-import { config } from "../apps/api/src/config.js";
+import { db } from "../src/server/db.js";
+import { config } from "../src/server/config.js";
 if (
   process.env.FIREBASE_AUTH_EMULATOR_HOST !== "127.0.0.1:9099" ||
   !config.databaseUrl.includes("127.0.0.1")
 )
   throw new Error("CRUD checks require local services.");
-const base = "http://127.0.0.1:4000/api";
+const base = "http://127.0.0.1:3000/api";
 const auth = (await fetch(
   "http://127.0.0.1:9099/identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key=local",
   {
@@ -132,14 +132,14 @@ try {
   );
   const preview = await call("/admin/videos/" + video.id + "/preview", "POST");
   assert.equal(preview.status, 200);
-  const range = await fetch("http://127.0.0.1:4000" + preview.data.url, {
+  const range = await fetch("http://127.0.0.1:3000" + preview.data.url, {
     headers: { Range: "bytes=0-15" },
   });
   assert.equal(range.status, 206);
   assert.equal((await range.arrayBuffer()).byteLength, 16);
   const ticket = preview.data.url;
   const tampered = ticket.slice(0, -2) + "xx";
-  assert.equal((await fetch("http://127.0.0.1:4000" + tampered)).status, 403);
+  assert.equal((await fetch("http://127.0.0.1:3000" + tampered)).status, 403);
   const lesson = (
     await call("/admin/sections/" + section.id + "/lessons", "POST", {
       title: "CRUD lesson",
@@ -179,7 +179,7 @@ try {
   );
   assert.equal(await db.video.count({ where: { id: video.id } }), 0);
   assert.equal(existsSync(resolve(config.uploadDir, video.localPath)), false);
-  assert.equal((await fetch("http://127.0.0.1:4000" + ticket)).status, 404);
+  assert.equal((await fetch("http://127.0.0.1:3000" + ticket)).status, 404);
   const historyCourse = await db.course.findFirst({
     where: { quiz: { attempts: { some: {} } } },
   });

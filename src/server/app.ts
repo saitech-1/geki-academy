@@ -1,15 +1,15 @@
-import express, {
+import { receiveUpload } from "./uploads";
+import {
+  createEndpoints,
+  jsonBody,
   type Request,
   type Response,
   type NextFunction,
-} from "express";
-import cors from "cors";
-import helmet from "helmet";
-import { rateLimit } from "express-rate-limit";
-import multer from "multer";
+} from "./http";
+import { rateLimit } from "./rate-limit";
 import { mkdir, unlink, open } from "node:fs/promises";
 import { extname, resolve } from "node:path";
-import { adminContent, adminSourceMedia } from "./admin-content.js";
+import { adminContent, adminSourceMedia } from "./admin-content";
 import { randomUUID, createHash } from "node:crypto";
 import { z, ZodError } from "zod";
 import { Prisma } from "@prisma/client";
@@ -19,48 +19,46 @@ import {
   CourseInput,
   QuestionInput,
 } from "@geki/contracts";
-import { config } from "./config.js";
-import { db, lockUser } from "./db.js";
-import { auth, admin, courseAccess, ticketCourseAccess } from "./auth.js";
-import { HttpError, requireCondition, watchedRanges, grade } from "./domain.js";
-import { sendLocalMedia, playbackProvider } from "./media.js";
+import { config } from "./config";
+import { db, lockUser } from "./db";
+import { auth, admin, courseAccess, ticketCourseAccess } from "./auth";
+import { HttpError, requireCondition, watchedRanges, grade } from "./domain";
+import { sendLocalMedia, playbackProvider } from "./media";
 import {
   protectedStatus,
   captionSyncTarget,
   hasCaptionText,
-} from "./protected-video.js";
-import { qrCheckout, learnerPayments, adminPayments } from "./qr-payments.js";
-const app = express();
-app.disable("x-powered-by");
-app.set("query parser", "simple");
-app.use((req, res, next) => {
-  req.requestId = randomUUID();
-  res.setHeader("X-Request-Id", req.requestId);
-  next();
-});
-app.use(helmet());
-app.use(
-  cors({
-    origin(origin, cb) {
-      if (!origin || config.origins.includes(origin)) cb(null, true);
-      else cb(new HttpError(403, "ORIGIN_DENIED", "Origin not allowed."));
-    },
-  }),
-);
-app.use(express.json({ limit: "1mb" }));
+} from "./protected-video";
+import { qrCheckout, learnerPayments, adminPayments } from "./qr-payments";
+const app = createEndpoints();
 app.use(
   "/api",
-  rateLimit({
-    windowMs: 60000,
-    limit: 5000,
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-  }),
+  (req, res, next) => {
+    const origin = req.headers.origin;
+    const sameOrigin = new URL(req.raw.url).origin;
+    if (origin && origin !== sameOrigin && !config.origins.includes(origin))
+      throw new HttpError(403, "ORIGIN_DENIED", "Origin not allowed.");
+    if (origin) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+    }
+    if (req.raw.method === "OPTIONS")
+      return res
+        .status(204)
+        .setHeader(
+          "Access-Control-Allow-Methods",
+          "GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS",
+        )
+        .setHeader(
+          "Access-Control-Allow-Headers",
+          "Content-Type, Authorization, X-Device-Key",
+        )
+        .end();
+    next();
+  },
+  jsonBody,
+  rateLimit({ windowMs: 60000, limit: 5000 }),
 );
-app.use("/api", (req, res, next) => {
-  res.setHeader("Cache-Control", "no-store");
-  next();
-});
 const hash = (s: string) => createHash("sha256").update(s).digest("hex");
 const id = (req: Request, key = "id") =>
   z.string().min(1).parse(req.params[key]);
@@ -938,37 +936,6 @@ app.post("/api/admin/videos", async (req, res) => {
     .parse(req.body);
   res.status(201).json(await db.video.create({ data: input }));
 });
-const upload = multer({
-  storage: multer.diskStorage({
-    destination(_req, _file, cb) {
-      mkdir(config.uploadDir, { recursive: true }).then(
-        () => cb(null, config.uploadDir),
-        (e) => cb(e, config.uploadDir),
-      );
-    },
-    filename(_req, file, cb) {
-      cb(
-        null,
-        `${randomUUID()}.${file.mimetype === "video/webm" ? "webm" : "mp4"}`,
-      );
-    },
-  }),
-  limits: { fileSize: 500 * 1024 * 1024, files: 1 },
-  fileFilter(_req, file, cb) {
-    const extension = extname(file.originalname).toLowerCase();
-    if (
-      ![".mp4", ".webm"].includes(extension) ||
-      !["video/mp4", "video/webm", "application/octet-stream", ""].includes(
-        file.mimetype,
-      )
-    )
-      return cb(
-        new HttpError(400, "INVALID_FILE", "Upload MP4 or WebM video."),
-      );
-    file.mimetype = extension === ".webm" ? "video/webm" : "video/mp4";
-    cb(null, true);
-  },
-});
 app.post(
   "/api/admin/videos/:id/upload",
   async (req, res, next) => {
@@ -983,7 +950,12 @@ app.post(
       "VIDEO_HAS_PROGRESS",
       "Create a new video to replace footage that students have already watched.",
     );
-    upload.single("file")(req, res, next);
+    await receiveUpload(req, {
+      field: "file",
+      directory: config.uploadDir,
+      video: true,
+    });
+    next();
   },
   async (req, res) => {
     requireCondition(req.file, 400, "FILE_REQUIRED", "Choose a video.");
@@ -1424,10 +1396,7 @@ app.get("/api/commerce", async (_req, res) =>
 app.use("/api/checkout", auth, accountLimit, qrCheckout);
 app.use("/api/me/payment-orders", learnerPayments);
 app.use("/api/admin/payment-orders", adminPayments);
-app.use((_req, _res) => {
-  throw new HttpError(404, "NOT_FOUND", "Endpoint not found.");
-});
-app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
+const handleError = (error: unknown, req: Request, res: Response) => {
   if (error instanceof ZodError)
     return res.status(400).json({
       error: "Please check the submitted fields.",
@@ -1448,8 +1417,6 @@ app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
         .status(404)
         .json({ error: "Record not found.", code: "NOT_FOUND" });
   }
-  if (error instanceof multer.MulterError)
-    return res.status(400).json({ error: error.message, code: "UPLOAD_ERROR" });
   if (error instanceof SyntaxError)
     return res
       .status(400)
@@ -1470,5 +1437,6 @@ app.use((error: unknown, req: Request, res: Response, _next: NextFunction) => {
     code: "INTERNAL_ERROR",
     requestId: req.requestId,
   });
-});
-export { app };
+};
+export const handleApi = (request: globalThis.Request) =>
+  app.handle(request, handleError);

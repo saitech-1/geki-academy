@@ -1,9 +1,10 @@
+import { Readable } from "node:stream";
 import { createReadStream } from "node:fs";
 import { stat } from "node:fs/promises";
 import { resolve, sep } from "node:path";
-import type { Request, Response } from "express";
-import { config } from "./config.js";
-import { HttpError, requireCondition } from "./domain.js";
+import type { Request, Response } from "./http";
+import { config } from "./config";
+import { HttpError, requireCondition } from "./domain";
 export async function sendLocalMedia(
   req: Request,
   res: Response,
@@ -53,14 +54,16 @@ export async function sendLocalMedia(
     res.status(206);
     res.setHeader("Content-Range", `bytes ${start}-${end}/${size}`);
     res.setHeader("Content-Length", end - start + 1);
-    createReadStream(target, { start, end })
-      .on("error", () => res.destroy())
-      .pipe(res);
+    res.send(
+      Readable.toWeb(
+        createReadStream(target, { start, end }),
+      ) as ReadableStream<Uint8Array>,
+    );
   } else {
     res.setHeader("Content-Length", size);
-    createReadStream(target)
-      .on("error", () => res.destroy())
-      .pipe(res);
+    res.send(
+      Readable.toWeb(createReadStream(target)) as ReadableStream<Uint8Array>,
+    );
   }
 }
 export async function playbackProvider(assetId: string, watermark: string) {

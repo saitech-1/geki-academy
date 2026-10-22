@@ -1,178 +1,86 @@
 # GEKI Academy
 
-A working Next.js web application, Express REST API, PostgreSQL/Prisma database and Firebase Authentication integration. The original design presentation remains in `design/`; application code lives in `apps/`.
+GEKI is one full-stack Next.js 16.4.2 application using React 19.3.1, TypeScript 5.9.3, PostgreSQL/Prisma 7.10.1, Firebase Authentication and VdoCipher. Next.js serves both the website and the REST API on port 3000. There is no Express server or separate web/API deployment.
 
-Build verification and release-gate setup are documented in [CI/CD](docs/ci-cd.md).
+## Source layout
 
-## Course-based sales (October 21, 2026)
+- `src/app`: pages and the Node.js API Route Handler at `src/app/api/[...path]/route.ts`.
+- `src/server`: server-side authentication, authorization, course/payment handlers, media and database access. The endpoint groups share existing business handlers; Next.js owns the HTTP server and native Request/Response lifecycle.
+- `src/components` and `src/lib`: the existing interface, localization and Firebase browser SDK.
+- `packages/contracts`: shared validation contracts, retained for future mobile clients.
+- `prisma`: the database schema and existing migrations. No learning or purchase records are migrated or reset by the application refactor.
+- `public`: public brand images and the intentionally public KBZPay QR. Private videos and receipts never belong here.
+- `design`: the original design prototype, separate from the application.
 
-GEKI sells individual course packages through one-time purchases with ongoing access. A purchase unlocks only that course's lessons and quiz. No monthly/annual subscriptions are offered. The first Kihon preview remains public. Existing membership records are retained as historical data and no longer grant access; expiry reminders are disabled.
+## Local development
 
-Set each course's approved price, currency and QR availability in **Admin → Courses**. For uploaded QR receipts, use **Admin → Payment Reviews** to verify the transaction and approve or request correction. KBZPay QR checkout is enabled for the Geki Kihon Package at 50,000 MMK with manual incoming-transfer verification. For a payment collected through an agreed external method, use **Admin → Students → Confirm paid course purchase**, select the course, enter the verified payment reference and audit reason. This records the paid amount/currency snapshot and unlocks the course; it does not charge the customer. Never confirm payment without verifying receipt. Payment references are unique, retries are idempotent, and access can be revoked per course. Purchased courses cannot be permanently deleted.
+Use Node 24.20.0 and Java 21+ for the Firebase Auth Emulator.
 
-**My Courses** lists purchase receipts and ongoing access. `/courses` lists all courses, `/courses/:slug` shows course details, and `/checkout/:courseSlug` handles that course's fee. `/membership` remains a compatibility alias for My Courses. The new `CoursePurchase` table is private and protected by RLS, with access enforced by Express/Firebase. Run the new Prisma migration before starting an updated API.
-
-## Run locally
-
-Requires Node.js 24 and Java 21+ for the Firebase Auth Emulator. Chrome is used by the browser checks.
-
-```powershell
-npm ci
+```sh
+npm ci --include=dev
 npm run setup:local
 npm run db:generate
 ```
 
-Start these in separate terminals:
+Start PostgreSQL and Firebase in separate terminals with `npm run db:local` and `npm run auth:emulator`. Then run:
 
-```powershell
-npm run db:local
-npm run auth:emulator
-```
-
-Once both are ready:
-
-```powershell
+```sh
 npm run db:migrate
 npm run db:seed
 npm run dev
 ```
 
-Open **http://127.0.0.1:3000**. API: `http://127.0.0.1:4000/api/health`. The Auth Emulator API runs on port 9099; its UI is disabled. After initialization, `npm run dev:all` starts the four services together.
+Open http://127.0.0.1:3000. The same server provides http://127.0.0.1:3000/api/health. After first setup, `npm run dev:all` starts PostgreSQL, Firebase and Next.js together. No port 4000/4001 or API proxy is needed.
 
-The Auth Emulator launcher imports the last `.local/firebase-auth` snapshot when present and exports on a graceful Ctrl+C shutdown. This keeps local identities associated with the same database learning records between sessions. Abrupt process termination cannot guarantee an export.
+Local seed accounts are admin@geki.local and student@geki.local, password GekiLocal!2026. These exist only in the emulator. The seed refuses hosted databases and real Firebase. It creates a draft course, not invented teaching content. Keep local database volumes and emulator snapshots between runs.
 
-Local accounts, valid only against the emulator:
+## Production configuration
 
-| Account        | Email              | Password       |
-| -------------- | ------------------ | -------------- |
-| Super Admin    | admin@geki.local   | GekiLocal!2026 |
-| Student        | student@geki.local | GekiLocal!2026 |
+Vercel Root Directory must be the repository root (blank). Framework: Next.js; install command: `npm ci --include=dev`; build: `npm run build`. Deploy one application. There is no `API_INTERNAL_URL` setting.
 
-The seed creates a **draft** Kihon package with four sections. Publish actual GEKI content through the admin workspace. Browser/integration tests create clearly labeled development videos and courses; these are not teaching material. No sample users or test videos are seeded into Supabase.
+Configure these through Vercel environment settings, not Git:
 
-Windows embedded PostgreSQL uses `.local/postgres`, port 5433 and a UTF-8 database. `docker compose up -d` is an alternative; use the database name/credentials from `docker-compose.yml`. The existing developer instance uses `geki_utf8`; `.env` already points there. Fresh setups create `geki` in UTF-8. Keep database volumes between runs.
+| Variable                                                                                                                     | Visibility / purpose                                                                                                                                        |
+| ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NEXT_PUBLIC_FIREBASE_API_KEY, NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN, NEXT_PUBLIC_FIREBASE_PROJECT_ID, NEXT_PUBLIC_FIREBASE_APP_ID | Public Firebase browser configuration; available at build time                                                                                              |
+| DATABASE_URL                                                                                                                 | Server secret; runtime database role only                                                                                                                   |
+| DATABASE_SSL_CA                                                                                                              | Public PEM CA certificate as a multiline environment value; keeps TLS certificate and hostname verification and avoids a laptop-specific certificate path   |
+| FIREBASE_PROJECT_ID                                                                                                          | Server Firebase project                                                                                                                                     |
+| FIREBASE_CHECK_REVOKED                                                                                                       | Current deployment uses false; signed tokens remain valid until expiry after Firebase revocation. Database suspension is checked on every protected request |
+| BOOTSTRAP_OWNER_EMAIL                                                                                                        | Only the configured verified owner is eligible for bootstrap                                                                                                |
+| MEDIA_MODE                                                                                                                   | vdocipher for protected streaming                                                                                                                           |
+| VDOCIPHER_API_SECRET, MEDIA_TICKET_SECRET                                                                                    | Server secrets                                                                                                                                              |
+| WEB_ORIGINS                                                                                                                  | Comma-separated additional trusted browser origins; same-origin requests work directly                                                                      |
 
-## What works
+Never configure FIREBASE*AUTH_EMULATOR_HOST or NEXT_PUBLIC_AUTH_EMULATOR_URL in Production. Never prefix database/provider secrets with NEXT_PUBLIC*. Production settings are already stored in the GEKI Vercel project; a fresh deployment is required to apply browser variables. Add the final domain in Firebase Authentication → Settings → Authorized domains for Google sign-in.
 
-- Email/password and Google sign-in, sign-up, verification, password reset and account recovery through Firebase SDKs. Adult/guardian learner onboarding and verified-email gates are enforced by the API.
-- Responsive public pages, course catalog/detail, guest preview, student dashboard, native video playback in development, resume/progress, quizzes and saved results.
-- Server-side per-course purchase checks, two account-bound browser registrations, one playback session, explicit stream transfer, two device replacements per rolling 30 days and admin override.
-- Admin course/section/lesson CRUD, reusable videos, lesson ordering, private source uploads and previews, EN/MM WebVTT editing/review, publishing guards, quiz editing, student purchase/suspension/device actions, roles and audit history.
-- Profile/language preference, notifications and course-purchase history backed by PostgreSQL.
-- Reduced-motion styling, keyboard focus, labeled controls, responsive layouts and mobile navigation.
+The private Supabase schema is `geki` in project msrvghakwqyjwwjcravk. Firebase remains the identity provider; Supabase Auth is not used. The runtime role `geki_api` has no migration privileges. Run `npm run db:migrate:live` separately with the ignored migration credentials before releasing schema changes. Never run the seed or integration fixtures against the live database.
 
-## Live Supabase and Firebase configuration
+For a local real-Firebase build, keep configuration in ignored root `.env.production.local` and run `npm run build` then `npm run start:live`. Development settings belong in `.env.development.local`; do not put emulator defaults in a generic `.env` that production would also load. Browser and server settings share the environment's root file. Existing private uploads remain in the same root `.local/uploads` directory.
 
-The new Supabase project is **geki-academy**, `msrvghakwqyjwwjcravk`, in the GEKI organization, Singapore. [Open the project](https://supabase.com/dashboard/project/msrvghakwqyjwwjcravk). Its private `geki` schema contains 20 application tables. Firebase remains the identity provider; Supabase Auth is not used.
+## Learning and commerce
 
-The server-only runtime login `geki_api` has application-table CRUD access and no schema migration privileges. Its random password is stored in the ignored `.env.production.local`. Data API roles have no schema access; all application tables have RLS and restrictive deny policies. Express performs per-user authorization using Firebase ID tokens. Never expose the database URL to a browser.
+Courses are one-time purchases with ongoing access. A purchase unlocks only that course; historical memberships grant no access. The first explicitly marked preview can be public. Every learner, including administrators using the learner player, needs a purchase for paid footage. Private administrator source previews remain separate.
 
-The IPv4 session pooler is configured with `sslmode=verify-full` and `sslrootcert`. The public trust certificate in `certificates/supabase-ca.crt` comes from the Supabase dashboard. If relocating this checkout, update the absolute certificate path inside the private database URL. Do not disable certificate verification.
+The Kihon course is 50,000 MMK. KBZPay checkout displays the supplied QR, accepts a private receipt and transaction ID, then requires manual review of the incoming transfer in KBZPay. A screenshot never unlocks a course automatically. Approval and purchase creation are atomic and idempotent; reused transaction IDs/evidence are rejected, self-review is forbidden, and access revocation is preserved. Admin → Payment Reviews handles submissions. Do not approve without verifying actual funds.
 
-```powershell
-npm run check:live-db
-npm run build
-npm run start:api:live
-# Separate terminal:
-npm run start:web:live
+Learning preserves watched coverage and resume position, two account-bound devices, one active stream with explicit transfer, quiz passing at 80% and unlimited retries. No certificates, community or seminar bookings are included. English/Burmese localization remains in `src/lib/translations.ts`; editorial review is still needed.
+
+## Private media and deployment limitations
+
+Local/self-hosted uploads stream MP4/WebM and receipt files to private disk with size and signature checks. Admin source preview uses short-lived signed URLs and role checks. Existing VdoCipher assets provide protected student playback; approved EN/MM subtitles must be synchronized before publishing.
+
+Vercel has no persistent private filesystem. This branch explicitly rejects disk uploads on Vercel with DIRECT_UPLOAD_REQUIRED instead of pretending to save a permanent file. A private direct-upload/object-storage integration is still required for cloud source uploads and payment receipts. Existing local source files are not automatically copied to Vercel. Do not release paid checkout until receipt uploads have a working durable storage path. Screen-recording prevention is platform-dependent and cannot be guaranteed universally.
+
+Additional request throttles are per Next.js instance; payment submission limits, purchase uniqueness and device/stream limits also have durable database enforcement. Distributed throttling remains a production follow-up. Progress/payment API responses are private and not cached.
+
+## Validation and release
+
+```sh
+npm run build:verified
+npm run test:ci
 ```
 
-Open **http://localhost:3001** for the real Firebase / Supabase build. The API runs on port 4001. Use `localhost` because it is an authorized Firebase domain. Local test accounts do not exist in the real Firebase project. Production catalog is intentionally empty until the draft launch course has reviewed, published teaching content.
+The second command requires the isolated `geki_ci` PostgreSQL database, Firebase Auth Emulator and the environment used in GitHub Actions. It starts its own Next.js server on port 3000 and refuses hosted databases. See [CI/CD](docs/ci-cd.md), [implementation status](IMPLEMENTATION_STATUS.md), [plan](PLAN.md) and [protected streaming](PROTECTED_STREAMING.md).
 
-Your supplied Firebase web configuration is installed in ignored `apps/web/.env.production.local`. Standard Firebase signature, issuer, audience and expiry verification is configured with `FIREBASE_CHECK_REVOKED=false`. This works without a private Admin key; revoked Firebase sessions remain valid until token expiry. Database suspension is checked immediately on protected API calls.
-
-The server has a one-time `BOOTSTRAP_OWNER_EMAIL` invitation configured for the owner's explicitly provided email. The matching **verified** Firebase sign-in receives Super Admin, with a database audit record and concurrent-request protection. An unverified email, another email or an emulator token cannot accept it. The consumed invitation does not override later role changes. No live user role was assigned before that real sign-in.
-
-For an existing account explicitly chosen by the operator, role bootstrap can also use the trusted local command without a privileged Firebase key:
-
-```powershell
-node --env-file=.env.production.local --import tsx scripts/grant-admin.ts --email YOUR_OWNER_EMAIL --existing-account
-```
-
-The account must already exist from a verified-token API sign-in. Admin API access still requires Firebase email verification. For privileged Firebase user management and immediate Firebase revocation checks, supply Application Default Credentials or a private service-account JSON file **outside this repository**, set `GOOGLE_APPLICATION_CREDENTIALS` and enable `FIREBASE_CHECK_REVOKED=true`. Never paste the JSON into chat. The original Firebase Admin lookup bootstrap remains available:
-
-```powershell
-node --env-file=.env.production.local --import tsx scripts/grant-admin.ts --email YOUR_VERIFIED_OWNER_EMAIL
-```
-
-The bootstrap records the role change in the audit log. Only the server-configured owner or explicitly selected account is eligible. The real project successfully returns a Google authorization URI; an email/password provider probe returned a credential error rather than a disabled-provider error. A real user's completed sign-in and email delivery still require acceptance testing. Add the final deployment domain to Firebase Authorized Domains before release.
-
-## Admin uploads and content operations
-
-Course create/edit/delete, section rename/delete, lesson edit/remove and video create/edit/delete now persist through the REST API. Deleting a course keeps reusable source videos; deleting a video is blocked while it has lesson links or student progress. Courses with quiz attempts must be unpublished rather than deleted. Delete/unpublish operations require an audit reason.
-
-Choose a local MP4/WebM in **Admin → Videos → Add video** to detect its duration, create the database record and upload the source. The UI displays upload progress. Admins can preview uploaded sources through five-minute signed links. The server rechecks the admin role and account suspension on media requests, validates file signatures and handles byte ranges. Replacing footage requires no existing watched progress and clears subtitle approvals; delete cleans up the private source file.
-
-Private source uploads are accepted even when production paid streaming is disabled. Store `UPLOAD_DIR` on a private persistent volume when deploying; Next.js/public assets are not used for these sources. Set a shared random `MEDIA_TICKET_SECRET` for multiple API instances. Production student playback/publishing still needs the configured protected provider. Plain source uploads do not promise universal recording prevention.
-
-Dialogs are portaled to the document body, centered across laptop sizes, and scroll internally. Motion includes page entrances, staggered metrics, public scroll reveals, modal entrance/exit and hover feedback, with reduced-motion support.
-
-## Database migrations
-
-`prisma/schema.prisma` is the schema source. `npm run db:migrate` deploys checked-in Prisma migrations and applies `database-security.sql` using an owner connection. The runtime login deliberately cannot perform DDL.
-
-The cloud schema was checked against Prisma with no difference detected and both existing foundation migrations are now baselined. The separate `geki_migrator` login owns only the private application schema. Its connection is stored in ignored `.env.migrations.local`; the runtime API continues using its more limited login. Run `npm run db:migrate:live` to apply reviewed, checked-in migrations and private-schema policies. Do not replay the foundation SQL or reset the cloud database. Back up before production migrations and review generated SQL. Never use `prisma migrate dev` against production.
-
-## Membership reminders and languages
-
-The existing notification center now receives in-app expiry reminders from a separate worker:
-
-```powershell
-npm run reminders:once
-# Or keep a local worker running:
-npm run reminders:worker
-# Explicitly against the cloud database:
-npm run start:reminders:live
-```
-
-The worker checks every 15 minutes by default (`REMINDER_INTERVAL_MS`, minimum 60000). It creates notices at seven days, one day and shortly after expiry, considers contiguous renewals, skips suspended accounts and uses a unique database key to prevent duplicate delivery across retries/concurrent workers. It sends no external email. Deploy it as a supervised worker or invoke `--once` from the chosen host's scheduler; it is not automatically running in production.
-
-The EN/မြန်မာ selector works on public and learner navigation. Guest choices persist in browser storage; account choices persist through `/api/me/preferences` without modifying onboarding consent. Burmese course titles/descriptions are shown when supplied, and search includes both languages. Missing translations use English. The dictionary is `apps/web/src/lib/translations.ts`; complete Burmese content and UI copy still require editorial review before launch.
-
-## Checks
-
-```powershell
-npm run typecheck
-npm test
-npm run build
-# With the local services running:
-npm run test:browser
-npm run test:reminders
-npm run test:admin
-npm run test:owner
-npm audit --omit=dev
-```
-
-`test:browser` creates a three-second test fixture, runs real API/database checks and verifies login, admin authorization, playback/resume, quiz persistence and mobile device management in Chrome. It only permits local emulator/Postgres services. Screenshots and reports are under ignored `.local/`.
-
-## Release work still required
-
-This is a functional development application with a connected cloud database, **not a paid-launch deployment**. See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for tested coverage and remaining release requirements. Payment collection, DRM service activation, approved teaching content, automated subtitle processing and a public deployment require further configuration/work. They are not simulated as completed.
-# Protected streaming setup
-
-See [PROTECTED_STREAMING.md](PROTECTED_STREAMING.md) for VdoCipher account connection, saved-source transfer, processing checks, subtitle sync, publication requirements and recovery. Live provider credentials and a real DRM playback test are still required. The web proxy now permits 500 MiB source uploads plus multipart overhead.
-
-
-## KBZPay QR payments
-
-The supplied QR is copied unchanged to a versioned public image asset. Kihon checkout is 50,000 MMK (5,000,000 minor units); the backend locks the amount and recipient when creating a payment order. Students must be signed in, email-verified and onboarded. They pay in KBZPay and upload a JPEG/PNG receipt (maximum 5 MB) plus the successful transaction ID.
-
-Orders progress from `AWAITING_PAYMENT` to `SUBMITTED`, then an admin sets `APPROVED` or `REJECTED`. A rejected order can be corrected and resubmitted. Pending requests appear in My Courses and survive reloads. Pending status refreshes while the checkout tab is visible. In-app notifications record approval or correction requests.
-
-**Verification is manual:** open the receiving KBZPay account and find the successful incoming transfer. Match transaction ID, amount and recipient against the request; compare the receipt and sender details as needed. A screenshot or a student saying “paid” is not proof of settlement. Approval requires the admin's explicit verification checkbox and an audit reason. Approval and the permanent course purchase are committed in one transaction. Repeated approval does not duplicate a purchase or reinstate a later-revoked purchase.
-
-The static personal QR does not supply authenticated settlement callbacks or a bank inquiry API. Automated bank verification is not implemented. A future merchant integration must use provider-issued credentials and verified server callbacks/inquiries; do not add a fake webhook or trust client-supplied payment success.
-
-Receipts are stored under the private persistent `UPLOAD_DIR/payment-proofs` folder, outside public web assets. Only the submitting learner and verified admins can fetch them with Firebase authentication; image responses are private/no-store. Do not make this directory public. Original/replaced proofs remain private for dispute/audit history; define a retention policy before production rollout. This implementation does not send financial receipts to AI/OCR services. Each account has ten receipt-upload attempts per hour, with at most five accepted submissions per order. Repeatedly rejected orders require GEKI support.
-
-Transactions and receipt hashes are unique across orders to stop straightforward reuse. This is not an authenticity check; the admin still verifies the incoming funds. Payment orders and purchases protect course deletion, retain the charged-price snapshot, and are isolated in the private RLS-protected application schema.
-
-Tests: run `npm run test:payments` with local PostgreSQL, Auth Emulator and API running. Then `TEST_WEB_URL=http://127.0.0.1:3002 node scripts/qr-payments-browser.cjs` against the local test web server (set the environment variable using your shell syntax). Tests use explicitly artificial local receipts; no real KBZPay transfer is initiated.
-
-## Unified courses and locked lessons
-
-`/courses` is the only public course listing. The separate package/pricing presentation has been removed; old `/pricing`, `/library` and bare `/checkout` bookmarks redirect to `/courses`. Each course detail links to its own payment checkout at `/checkout/:courseSlug`.
-
-Non-preview lessons show a locked view for guests and students without an active purchase for that specific course. The lock links directly to that course's fee/QR checkout. Preview lessons remain available without purchase. Administrator roles do not bypass learner purchase checks. Private admin source previews remain available in video management; server-side playback/quiz authorization remains authoritative. A `/preview/:id` URL does not turn a paid lesson into a preview.
-
-Local browser verification: after running the integration fixtures, set `TEST_WEB_URL` to your local emulator web server and run `node scripts/locked-lessons-browser.cjs`. It verifies guest/unpaid locks, no video request from the locked screen, public previews, purchased playback, redirects and mobile layout.
+Protect main and require the GitHub Release gate in Vercel Deployment Checks. A passing workflow alone does not configure those account settings or make private cloud uploads production-ready.

@@ -1,19 +1,19 @@
-import { Router, type Request } from "express";
-import multer from "multer";
-import { rateLimit } from "express-rate-limit";
+import { createEndpoints, type Request, type Response } from "./http";
+import { receiveUpload } from "./uploads";
+import { rateLimit } from "./rate-limit";
 import { randomUUID, createHash } from "node:crypto";
 import { mkdir, readFile, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
-import { db, lockUser } from "./db.js";
-import { config } from "./config.js";
-import { HttpError, requireCondition } from "./domain.js";
-import { sendLocalMedia } from "./media.js";
+import { db, lockUser } from "./db";
+import { config } from "./config";
+import { HttpError, requireCondition } from "./domain";
+import { sendLocalMedia } from "./media";
 import { ReasonInput } from "@geki/contracts";
 
-export const qrCheckout = Router();
-export const learnerPayments = Router();
-export const adminPayments = Router();
+export const qrCheckout = createEndpoints();
+export const learnerPayments = createEndpoints();
+export const adminPayments = createEndpoints();
 const qrImage = "/images/payments/kbzpay-9f2c51401cd1.jpg";
 const recipient = "Sai Zay Bhone Hlyan (ending 8829)";
 const select = {
@@ -111,30 +111,6 @@ learnerPayments.get("/:id", async (req, res) => {
   requireCondition(order, 404, "NOT_FOUND", "Payment request not found.");
   res.json(order);
 });
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: (_req, _file, cb) => {
-      const path = resolve(config.uploadDir, "payment-proofs");
-      mkdir(path, { recursive: true }).then(
-        () => cb(null, path),
-        (err) => cb(err, path),
-      );
-    },
-    filename: (_req, _file, cb) => cb(null, randomUUID() + ".receipt"),
-  }),
-  limits: { fileSize: 5 * 1024 * 1024, files: 1, fields: 1, fieldSize: 128 },
-  fileFilter: (_req, file, cb) => {
-    if (!["image/jpeg", "image/png"].includes(file.mimetype))
-      return cb(
-        new HttpError(
-          400,
-          "INVALID_RECEIPT",
-          "Upload a PNG or JPEG receipt, up to 5 MB.",
-        ),
-      );
-    cb(null, true);
-  },
-});
 learnerPayments.post(
   "/:id/proof",
   rateLimit({
@@ -161,7 +137,11 @@ learnerPayments.post(
       "PAYMENT_LOCKED",
       "This payment has already been submitted. Wait for review before sending another receipt.",
     );
-    upload.single("proof")(req, _res, next);
+    await receiveUpload(req, {
+      field: "proof",
+      directory: resolve(config.uploadDir, "payment-proofs"),
+    });
+    next();
   },
   async (req, res) => {
     requireCondition(
@@ -279,7 +259,7 @@ learnerPayments.post(
     }
   },
 );
-async function proof(req: Request, res: import("express").Response) {
+async function proof(req: Request, res: Response) {
   const order = await db.paymentOrder.findFirst({
     where: {
       id: id(req),

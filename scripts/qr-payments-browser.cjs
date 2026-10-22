@@ -2,7 +2,7 @@ const assert = require("node:assert/strict");
 const fs = require("fs");
 const { chromium } = require("playwright");
 (async () => {
-  const h = await fetch("http://127.0.0.1:4000/api/health").then((r) =>
+  const h = await fetch("http://127.0.0.1:3000/api/health").then((r) =>
     r.json(),
   );
   assert.equal(h.authMode, "emulator");
@@ -41,7 +41,7 @@ const { chromium } = require("playwright");
       name: "local-receipt-fixture.jpg",
       mimeType: "image/jpeg",
       buffer: Buffer.concat([
-        fs.readFileSync("apps/web/public/images/hero.jpg"),
+        fs.readFileSync("public/images/hero.jpg"),
         Buffer.from("local-fixture-" + Date.now()),
       ]),
     });

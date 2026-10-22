@@ -180,7 +180,7 @@ export function AuthPage({ route }: { route: string }) {
                 className="text-link"
                 href={
                   (process.env.NEXT_PUBLIC_CONNECTED_APP_URL ||
-                    "http://localhost:3001") + route
+                    "http://localhost:3000") + route
                 }
               >
                 Use real Firebase sign-in <Icon name="up" />

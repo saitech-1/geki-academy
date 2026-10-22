@@ -16,18 +16,18 @@ assert.equal(process.env.FIREBASE_AUTH_EMULATOR_HOST, "127.0.0.1:9099");
 assert.equal(process.env.NODE_ENV, "test");
 assert.equal(process.env.MEDIA_MODE, "local");
 assert.equal(process.env.UPLOAD_DIR, ".local/ci-uploads");
-assert.equal(process.env.PORT, "4000");
+assert.equal(process.env.PORT, "3000");
 assert.equal(process.env.HOST, "127.0.0.1");
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const health = "http://127.0.0.1:4000/api/health";
+const health = "http://127.0.0.1:3000/api/health";
 // Do not accidentally test another process or terminate an existing development API.
 let occupied = false;
 try {
   await fetch(health, { signal: AbortSignal.timeout(1000) });
   occupied = true;
 } catch {}
-assert.equal(occupied, false, "Port 4000 must be free before starting CI");
+assert.equal(occupied, false, "Port 3000 must be free before starting CI");
 
 function start(script) {
   return spawn(process.execPath, ["--import", "tsx", script], {
@@ -55,14 +55,34 @@ await copyFile(
   new URL("../.local/verification.webm", import.meta.url),
 );
 await finished(start("scripts/seed.ts"));
-const api = start("apps/api/src/index.ts");
+const api = spawn(
+  process.execPath,
+  [
+    "node_modules/next/dist/bin/next",
+    "dev",
+    "--hostname",
+    "127.0.0.1",
+    "--port",
+    "3000",
+  ],
+  {
+    cwd: root,
+    env: {
+      ...process.env,
+      NODE_ENV: "development",
+      NEXT_TELEMETRY_DISABLED: "1",
+    },
+    stdio: "inherit",
+    windowsHide: true,
+  },
+);
 let startupError;
 api.once("error", (error) => {
   startupError = error;
 });
 try {
   let ready = false;
-  const deadline = Date.now() + 30_000;
+  const deadline = Date.now() + 120_000;
   while (Date.now() < deadline) {
     if (startupError) throw startupError;
     if (api.exitCode !== null)
@@ -78,7 +98,7 @@ try {
     } catch {}
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
-  assert.ok(ready, "CI API did not become healthy within 30 seconds");
+  assert.ok(ready, "Next.js API did not become healthy within 120 seconds");
   await finished(start("scripts/integration-test.ts"));
   await finished(start("scripts/qr-payments-test.ts"));
 } finally {
