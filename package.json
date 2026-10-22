@@ -35,7 +35,9 @@
     "start:reminders:live": "node --env-file=.env.production.local --import tsx scripts/membership-reminders.ts",
     "start:api:live": "node --env-file=.env.production.local --import tsx apps/api/src/index.ts",
     "start:web:live": "npm run start -w @geki/web -- --port 3000",
-    "test:payments": "tsx scripts/qr-payments-test.ts"
+    "test:payments": "tsx scripts/qr-payments-test.ts",
+    "test:ci": "node scripts/ci-integration.mjs",
+    "build:verified": "npm run db:generate && npm run typecheck && npm test && npm run build --workspaces --if-present"
   },
   "dependencies": {
     "@prisma/adapter-pg": "7.10.1",
