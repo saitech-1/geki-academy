@@ -6,17 +6,21 @@
 It uses Node 24.20.0, the committed npm lockfile, pinned GitHub Actions and
 read-only repository permissions. No production secrets are required.
 
-The two jobs run independently:
+The three jobs run independently:
 
 - `Typecheck, unit tests and production build` generates Prisma, checks both
   applications, runs unit tests and compiles the production Next.js app.
+- `Isolated web workspace production build` installs only the web workspace
+  and its dependencies, excluding root development dependencies, then compiles
+  Next.js. This catches undeclared web build tools that a full repository
+  installation can hide.
 - `Auth, paid access and QR payment regression tests` provisions disposable
   PostgreSQL, applies all migrations and database security, starts Firebase's
   Auth Emulator and the Express API, then runs the existing API and payment
   tests. These include paid-video access, device limits, quiz grading, receipt
   privacy, duplicate evidence, manual approval and revoked access.
 
-`Release gate` succeeds only when both jobs succeed. A failed, cancelled or
+`Release gate` succeeds only when all three jobs succeed. A failed, cancelled or
 skipped dependency fails the gate. Production data, video-provider credentials
 and real payment transactions are never used by these tests. Provider contract
 unit tests use mocked responses; they do not prove live DRM or banking works.
@@ -55,6 +59,12 @@ The repository-root `vercel.json` uses `npm ci --include=dev`, keeping the
 lockfile authoritative and ensuring the pinned TypeScript/build tools are
 installed even when the environment otherwise omits development dependencies.
 Do not override this with an install command that omits them.
+
+The web workspace also declares `typescript@5.9.3` and `@types/node` directly.
+`apps/web/vercel.json` repeats the explicit install rule for Vercel projects
+whose Root Directory is `apps/web`, where the repository-root configuration
+does not apply. These settings cover dependency installation only; selecting
+`apps/web` deploys the frontend and does not automatically host Express.
 
 To reproduce the compile checks locally:
 
