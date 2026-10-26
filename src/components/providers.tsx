@@ -11,14 +11,14 @@ import {
 import { onIdTokenChanged, signOut, type User } from "firebase/auth";
 import type { CurrentUser } from "@geki/contracts";
 import { firebaseAuth } from "@/lib/firebase";
-import { api } from "@/lib/api";
+import { api, registerCurrentDevice } from "@/lib/api";
 import { LocaleProvider } from "./locale";
-import { MotionEffects } from "./motion";
 type Context = {
   identity: User | null;
   account: CurrentUser | null;
   loading: boolean;
   error: string;
+  deviceNotice: string;
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -28,6 +28,7 @@ export function Providers({ children }: { children: ReactNode }) {
   const [account, setAccount] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [deviceNotice, setDeviceNotice] = useState("");
   const authVersion = useRef(0);
   const refresh = useCallback(async () => {
     const user = firebaseAuth().currentUser;
@@ -39,6 +40,14 @@ export function Providers({ children }: { children: ReactNode }) {
     if (firebaseAuth().currentUser?.uid !== user.uid) return;
     setAccount(data);
     setError("");
+    try {
+      await registerCurrentDevice();
+      setDeviceNotice("");
+    } catch (e) {
+      setDeviceNotice(
+        e instanceof Error ? e.message : "Unable to register this browser.",
+      );
+    }
   }, []);
   useEffect(() => {
     let active = true;
@@ -49,12 +58,25 @@ export function Providers({ children }: { children: ReactNode }) {
         const version = ++authVersion.current;
         setIdentity(user);
         setAccount(null);
+        setDeviceNotice("");
         setError("");
         setLoading(true);
         try {
           if (user) {
             const me = await api<CurrentUser>("/me");
-            if (active && version === authVersion.current) setAccount(me);
+            let notice = "";
+            try {
+              await registerCurrentDevice();
+            } catch (e) {
+              notice =
+                e instanceof Error
+                  ? e.message
+                  : "This browser could not be registered. Open My Devices to retry.";
+            }
+            if (active && version === authVersion.current) {
+              setAccount(me);
+              setDeviceNotice(notice);
+            }
           }
         } catch (e) {
           if (active && version === authVersion.current)
@@ -80,10 +102,17 @@ export function Providers({ children }: { children: ReactNode }) {
   };
   return (
     <AuthContext.Provider
-      value={{ identity, account, loading, error, refresh, logout }}
+      value={{
+        identity,
+        account,
+        loading,
+        error,
+        deviceNotice,
+        refresh,
+        logout,
+      }}
     >
       <LocaleProvider account={account} refresh={refresh}>
-        <MotionEffects />
         {children}
       </LocaleProvider>
     </AuthContext.Provider>

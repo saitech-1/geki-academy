@@ -2455,18 +2455,20 @@ dialog.is-closing {
 .export-mode .hero-photo {
   transform: none;
 }
-.export-mode .scroll-reveal {
+.export-mode [data-scroll-reveal] {
   opacity: 1;
   transform: none;
 }
-.scroll-reveal {
-  opacity: 0;
-  transform: translateY(22px);
+[data-scroll-reveal] {
   transition:
     opacity 0.8s var(--ease),
     transform 0.8s var(--ease);
 }
-.scroll-reveal.visible {
+[data-scroll-reveal="pending"] {
+  opacity: 0;
+  transform: translateY(22px);
+}
+[data-scroll-reveal="visible"] {
   opacity: 1;
   transform: none;
 }
@@ -2519,7 +2521,7 @@ dialog.is-closing {
   display: none !important;
 }
 .footer-word {
-  font-size: clamp(42px, 13.8vw, 200px);
+  font-size: clamp(42px, 11.8vw, 174px);
   white-space: nowrap;
 }
 .public-nav {
@@ -3625,7 +3627,7 @@ dialog.is-closing {
     transition: none !important;
     scroll-behavior: auto !important;
   }
-  .scroll-reveal {
+  [data-scroll-reveal] {
     opacity: 1;
     transform: none;
   }
@@ -3639,7 +3641,7 @@ dialog.is-closing {
 }
 @media (max-width: 600px) {
   .footer-word {
-    font-size: 13.5vw;
+    font-size: 11.8vw;
     white-space: nowrap;
   }
 }
@@ -3745,14 +3747,6 @@ dialog.is-closing {
   gap: 10px;
   align-items: center;
 }
-.motion-ready .scroll-reveal {
-  opacity: 0;
-  transform: translateY(24px);
-}
-.motion-ready .scroll-reveal.visible {
-  opacity: 1;
-  transform: none;
-}
 @media (max-width: 1280px) {
   .editor-lesson {
     flex-wrap: wrap;
@@ -3772,7 +3766,7 @@ dialog.is-closing {
   dialog.is-closing {
     animation: none !important;
   }
-  .motion-ready .scroll-reveal {
+  [data-scroll-reveal] {
     opacity: 1;
     transform: none;
   }

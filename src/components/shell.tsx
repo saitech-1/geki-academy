@@ -127,7 +127,8 @@ export function AppShell({
   route: string;
   admin?: boolean;
 }) {
-  const { identity, account, loading, error, logout, refresh } = useAuth();
+  const { identity, account, loading, error, deviceNotice, logout, refresh } =
+    useAuth();
   const { t: translate } = useLocale();
   const router = useRouter();
   const nav = admin ? adminNav : studentNav;
@@ -271,6 +272,11 @@ export function AppShell({
             </div>
           ) : null}
           <div key={route} className="page-enter">
+            {deviceNotice && route !== "/devices" ? (
+              <div className="notice">
+                {deviceNotice} <Link href="/devices">Manage devices</Link>
+              </div>
+            ) : null}
             {children}
           </div>
         </main>

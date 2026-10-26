@@ -16,10 +16,42 @@ export function deviceKey() {
   const name = deviceStorageName();
   let key = localStorage.getItem(name);
   if (!key) {
-    key = crypto.randomUUID() + crypto.randomUUID();
+    key = Array.from(crypto.getRandomValues(new Uint8Array(32)), (b) =>
+      b.toString(16).padStart(2, "0"),
+    ).join("");
     localStorage.setItem(name, key);
   }
   return key;
+}
+export function deviceLabel() {
+  const ua = navigator.userAgent;
+  const os = /Android/i.test(ua)
+    ? "Android"
+    : /iPhone|iPad/i.test(ua)
+      ? "iPhone / iPad"
+      : /Windows/i.test(ua)
+        ? "Windows"
+        : /Macintosh/i.test(ua)
+          ? "Mac"
+          : "Device";
+  const browser = /FBAN|FBAV/i.test(ua)
+    ? "Facebook"
+    : /Edg/i.test(ua)
+      ? "Edge"
+      : /Firefox/i.test(ua)
+        ? "Firefox"
+        : /Chrome|CriOS/i.test(ua)
+          ? "Chrome"
+          : /Safari/i.test(ua)
+            ? "Safari"
+            : "browser";
+  return `${os} · ${browser}`;
+}
+export async function registerCurrentDevice() {
+  return api("/me/devices", {
+    method: "POST",
+    body: json({ key: deviceKey(), label: deviceLabel() }),
+  });
 }
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);

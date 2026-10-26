@@ -11,11 +11,13 @@ type Order = {
   currency: string;
   status: string;
   transactionId: string | null;
+  receiptUpload?: "direct" | "local";
   qrImage: string;
   recipient: string;
   reviewReason: string | null;
   submittedAt: string | null;
   createdAt: string;
+  updatedAt: string;
   course: { title: string; slug: string };
   user?: { email: string; displayName: string };
 };
@@ -122,6 +124,12 @@ export function KbzPayCheckout({ course }: { course: Course }) {
   const { data: orders, reload } = useData<Order[]>(
     account ? "/me/payment-orders" : null,
   );
+  const { data: quote } = useData<{
+    amountMinor: number;
+    regularAmountMinor: number;
+    currency: string;
+    founding: boolean;
+  }>(account ? "/checkout/quote/" + course.id : null);
   const [current, setCurrent] = useState<Order | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
@@ -176,10 +184,27 @@ export function KbzPayCheckout({ course }: { course: Course }) {
     }
     setBusy(true);
     try {
+      let body: FormData | string = form;
+      if (order.receiptUpload === "direct") {
+        const upload = await api<{ signedUrl: string; uploadToken: string }>(
+          `/me/payment-orders/${order.id}/upload`,
+          { method: "POST" },
+        );
+        const uploaded = await fetch(upload.signedUrl, {
+          method: "PUT",
+          body: proof as File,
+          headers: { "Content-Type": (proof as File).type },
+        });
+        if (!uploaded.ok)
+          throw new Error(
+            "Photo upload failed. Choose a PNG or JPEG up to 5 MB and try again.",
+          );
+        body = json({ uploadToken: upload.uploadToken });
+      }
       setCurrent(
         await api<Order>(`/me/payment-orders/${order.id}/proof`, {
           method: "POST",
-          body: form,
+          body,
         }),
       );
       reload();
@@ -191,193 +216,55 @@ export function KbzPayCheckout({ course }: { course: Course }) {
       setBusy(false);
     }
   }
+  const total =
+    order ||
+    quote ||
+    (course.priceMinor
+      ? { amountMinor: course.priceMinor, currency: course.currency }
+      : null);
+  const founding =
+    total?.amountMinor === 3500000 &&
+    course.slug === "geki-kihon-package" &&
+    course.priceMinor === 5000000;
+  const expired =
+    order &&
+    ["AWAITING_PAYMENT", "REJECTED"].includes(order.status) &&
+    Date.now() - new Date(order.updatedAt).getTime() >= 24 * 3600000;
   return (
     <>
       <Heading
-        eyebrow="SECURE YOUR NEXT CHAPTER"
+        eyebrow="COURSE PAYMENT"
         title={course.title}
-        description="Pay once. Keep ongoing access to this course’s lessons and quiz."
+        description="Pay once. Keep ongoing course access."
       />
       {failure ? <Message error>{failure}</Message> : null}
       {owned || order?.status === "APPROVED" ? (
         <section className="panel stack">
           <Badge tone="green">Payment confirmed</Badge>
           <h2>Your course is ready.</h2>
-          <p>Your purchase gives you ongoing access to {course.title}.</p>
           <Button href={"/courses/" + course.slug}>Start your course</Button>
         </section>
       ) : (
         <div className="qr-checkout-grid">
-          <section className="panel stack">
-            <div className="eyebrow">ONE COURSE. YOUR OWN PACE.</div>
-            <h3>Order summary</h3>
+          <section className="panel stack qr-payment-panel">
+            <div className="eyebrow">KBZPAY · ONE-TIME PAYMENT</div>
             <div className="payment-total">
-              {order
-                ? money(order)
-                : course.priceMinor
-                  ? money({
-                      amountMinor: course.priceMinor,
-                      currency: course.currency,
-                    })
-                  : "Price to be announced"}
+              {total ? money(total) : "Price to be announced"}
             </div>
-            <p>{course.title} · One-time purchase</p>
-            <p>
-              Includes all lessons in this course, progress tracking and its
-              final quiz.
-            </p>
-            {!account ? (
-              <Button
-                href={
-                  "/signin?next=" +
-                  encodeURIComponent("/checkout/" + course.slug)
-                }
-              >
-                Sign in to continue
-              </Button>
-            ) : !order ? (
-              <>
-                <Button
-                  disabled={busy || !course.priceMinor || !course.kbzPayEnabled}
-                  onClick={() => void begin()}
-                >
-                  {busy ? "Preparing your order…" : "Pay with KBZPay"}
-                </Button>
-                {!course.kbzPayEnabled ? (
-                  <p>QR payments are not enabled for this course yet.</p>
-                ) : null}
-              </>
-            ) : (
-              <>
-                <Badge
-                  tone={
-                    order.status === "SUBMITTED"
-                      ? "amber"
-                      : order.status === "REJECTED"
-                        ? "red"
-                        : "free"
-                  }
-                >
-                  {stateLabel(order.status)}
-                </Badge>
-                <small>Order {order.id}</small>
-                {order.status === "SUBMITTED" ? (
-                  <>
-                    <h3>Thanks. We’re checking your payment.</h3>
-                    <p>
-                      Your receipt is submitted. GEKI will compare the
-                      transaction with its incoming KBZPay records before
-                      unlocking your course. You’ll receive an account
-                      notification after review.
-                    </p>
-                    <p>Transaction ID: {order.transactionId}</p>
-                    <Button
-                      secondary
-                      disabled={busy}
-                      onClick={async () => {
-                        setBusy(true);
-                        try {
-                          const updated = await api<Order>(
-                            "/me/payment-orders/" + order.id,
-                          );
-                          setCurrent(updated);
-                          await refresh();
-                        } catch (e) {
-                          setFailure(
-                            e instanceof Error
-                              ? e.message
-                              : "Could not refresh payment status.",
-                          );
-                        } finally {
-                          setBusy(false);
-                        }
-                      }}
-                    >
-                      Refresh payment status
-                    </Button>
-                    <ReceiptImage orderId={order.id} />
-                  </>
-                ) : (
-                  <>
-                    {order.status === "REJECTED" ? (
-                      <div className="notice">
-                        <strong>Payment needs attention</strong>
-                        <p>{order.reviewReason}</p>
-                        <p>
-                          Check your transaction details before resubmitting.
-                          Don’t pay a second time for a transfer that already
-                          succeeded.
-                        </p>
-                      </div>
-                    ) : null}
-                    <form className="stack" onSubmit={submit}>
-                      <h3>Submit your payment details</h3>
-                      <label>
-                        KBZPay transaction ID
-                        <input
-                          name="transactionId"
-                          required
-                          minLength={6}
-                          maxLength={64}
-                          autoComplete="off"
-                          placeholder="Transaction ID from your successful payment"
-                          defaultValue={order.transactionId || ""}
-                        />
-                      </label>
-                      <label>
-                        Payment receipt
-                        <input
-                          name="proof"
-                          type="file"
-                          accept="image/jpeg,image/png"
-                          required
-                        />
-                      </label>
-                      <small>
-                        PNG or JPEG, up to 5 MB. Show the successful payment,
-                        amount, recipient and transaction ID. Keep unrelated
-                        balance and transactions out of the image.
-                      </small>
-                      <label className="consent">
-                        <input type="checkbox" required />
-                        <span>
-                          I have paid the exact amount shown to the recipient on
-                          this QR.
-                        </span>
-                      </label>
-                      <Button type="submit" disabled={busy}>
-                        {busy
-                          ? "Submitting receipt…"
-                          : "Submit for verification"}
-                      </Button>
-                      <small>
-                        Receipt submission does not confirm payment or unlock
-                        the course.
-                      </small>
-                    </form>
-                  </>
-                )}
-              </>
-            )}
-          </section>
-          <aside className="panel stack qr-payment-panel">
-            <div className="eyebrow">KBZPAY / SCAN TO PAY</div>
-            <h3>
-              {order
-                ? money(order)
-                : course.priceMinor
-                  ? money({
-                      amountMinor: course.priceMinor,
-                      currency: course.currency,
-                    })
-                  : "Price to be announced"}
-            </h3>
-            {order ? (
+            {founding ? (
+              <div className="stack">
+                <Badge>Founding learner · 30% off</Badge>
+                <p>
+                  <s>50,000 MMK</s> · First 50 paying Kihon learners.
+                </p>
+              </div>
+            ) : null}
+            {order && !expired ? (
               <>
                 <img
                   className="payment-qr"
                   src={order.qrImage}
-                  alt="KBZPay QR code for Sai Zay Bhone Hlyan, account ending 8829"
+                  alt="GEKI Academy KBZPay payment QR"
                 />
                 <a
                   className="text-link"
@@ -387,38 +274,111 @@ export function KbzPayCheckout({ course }: { course: Course }) {
                   Save QR image ↓
                 </a>
                 <p>
-                  Recipient: <strong>{order.recipient}</strong>
+                  Pay <strong>{money(order)}</strong> to{" "}
+                  <strong>{order.recipient}</strong>.
                 </p>
-                <ol className="payment-steps">
-                  <li>
-                    Scan this QR in KBZPay, or save it and use image scanning.
-                  </li>
-                  <li>
-                    Enter exactly <strong>{money(order)}</strong>. Check the
-                    recipient before paying.
-                  </li>
-                  <li>
-                    Save the successful receipt and submit it with the
-                    transaction ID.
-                  </li>
-                </ol>
-                <small>
-                  Payments are checked by the GEKI team against incoming
-                  transfers. A screenshot alone cannot verify a payment.
-                </small>
+                {order.status !== "SUBMITTED" ? (
+                  <small>
+                    Complete payment and upload your receipt within 24 hours of
+                    opening this order. Your quoted price is reserved during
+                    this window.
+                  </small>
+                ) : null}
               </>
             ) : (
               <p>
-                Sign in and open your payment order to view the QR and exact
-                payment instructions.
+                {expired
+                  ? "This payment window expired. Refresh the price before paying. If you already paid, contact GEKI before paying again."
+                  : "Open your order to reserve the exact price and view the payment QR."}
               </p>
             )}
-          </aside>
+            {!account ? (
+              <Button
+                href={
+                  "/signin?next=" +
+                  encodeURIComponent("/checkout/" + course.slug)
+                }
+              >
+                Sign in to pay
+              </Button>
+            ) : !order || expired ? (
+              <Button
+                disabled={busy || !course.priceMinor || !course.kbzPayEnabled}
+                onClick={() => void begin()}
+              >
+                {busy
+                  ? "Preparing…"
+                  : expired
+                    ? "Refresh payment price"
+                    : "Continue to payment"}
+              </Button>
+            ) : null}
+            {!course.kbzPayEnabled ? (
+              <small>QR payment is not available for this course yet.</small>
+            ) : null}
+          </section>
+          <section className="panel stack">
+            {order?.status === "SUBMITTED" ? (
+              <>
+                <Badge tone="amber">Under review</Badge>
+                <h3>Receipt received.</h3>
+                <p>
+                  GEKI will check the incoming payment and unlock your course
+                  after approval. You’ll receive a notification.
+                </p>
+                <ReceiptImage orderId={order.id} />
+              </>
+            ) : (
+              <>
+                <h3>Upload your payment photo</h3>
+                <p>
+                  Scan the QR, pay the exact amount, then upload the successful
+                  payment receipt.
+                </p>
+                {order?.status === "REJECTED" ? (
+                  <Message error>
+                    {order.reviewReason || "Please upload a clearer receipt."}{" "}
+                    Don’t pay twice for a successful transfer.
+                  </Message>
+                ) : null}
+                {order && !expired ? (
+                  <form className="stack" onSubmit={submit}>
+                    <label>
+                      Receipt photo
+                      <input
+                        name="proof"
+                        type="file"
+                        accept="image/jpeg,image/png"
+                        required
+                      />
+                    </label>
+                    <small>
+                      PNG or JPEG, up to 5 MB. Keep the amount, recipient and
+                      successful payment details visible. No transaction ID to
+                      type.
+                    </small>
+                    <Button type="submit" disabled={busy}>
+                      {busy ? "Uploading…" : "Submit payment photo"}
+                    </Button>
+                  </form>
+                ) : (
+                  <p>
+                    Your receipt upload will appear after you open a payment
+                    order.
+                  </p>
+                )}
+                <small>
+                  Your course unlocks after GEKI verifies the payment.
+                </small>
+              </>
+            )}
+          </section>
         </div>
       )}
     </>
   );
 }
+
 export function AdminPaymentReviews() {
   const { account } = useAuth();
   const [filter, setFilter] = useState("SUBMITTED");
@@ -430,6 +390,7 @@ export function AdminPaymentReviews() {
   const [selected, setSelected] = useState<Order | null>(null);
   const [reason, setReason] = useState("");
   const [verified, setVerified] = useState(false);
+  const [bankReference, setBankReference] = useState("");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
   async function review(decision: string) {
@@ -439,7 +400,14 @@ export function AdminPaymentReviews() {
     try {
       await api("/admin/payment-orders/" + selected.id + "/review", {
         method: "POST",
-        body: json({ decision, verifiedInKbzPay: verified, reason }),
+        body: json({
+          decision,
+          verifiedInKbzPay: verified,
+          ...(bankReference.trim()
+            ? { bankReference: bankReference.trim() }
+            : {}),
+          reason,
+        }),
       });
       setSelected(null);
       reload();
@@ -497,7 +465,7 @@ export function AdminPaymentReviews() {
                   </td>
                   <td>{o.course.title}</td>
                   <td>{money(o)}</td>
-                  <td>{o.transactionId || "—"}</td>
+                  <td>{o.transactionId || "See receipt"}</td>
                   <td>
                     <Badge tone={o.status === "APPROVED" ? "green" : "amber"}>
                       {stateLabel(o.status)}
@@ -510,6 +478,7 @@ export function AdminPaymentReviews() {
                         setSelected(o);
                         setReason("");
                         setVerified(false);
+                        setBankReference("");
                         setFailure("");
                       }}
                     >
@@ -538,7 +507,10 @@ export function AdminPaymentReviews() {
             <p>Recipient: {selected.recipient}</p>
             <p>
               Transaction ID:{" "}
-              <strong>{selected.transactionId || "Not submitted"}</strong>
+              <strong>
+                {selected.transactionId ||
+                  "Shown on receipt — no typed ID required"}
+              </strong>
             </p>
             {selected.submittedAt ? (
               <>
@@ -566,6 +538,16 @@ export function AdminPaymentReviews() {
                     and the amount and recipient match this order.
                   </span>
                 </label>
+                {!selected.transactionId ? (
+                  <label>
+                    Incoming KBZPay reference (admin only)
+                    <input
+                      value={bankReference}
+                      onChange={(e) => setBankReference(e.target.value)}
+                      placeholder="Reference from your own incoming payment record"
+                    />
+                  </label>
+                ) : null}
                 <label>
                   Review reason
                   <textarea
@@ -579,7 +561,13 @@ export function AdminPaymentReviews() {
                 </label>
                 <div className="row wrap">
                   <Button
-                    disabled={busy || !verified || reason.trim().length < 8}
+                    disabled={
+                      busy ||
+                      !verified ||
+                      reason.trim().length < 8 ||
+                      (!selected.transactionId &&
+                        !/^[A-Za-z0-9\s-]{6,64}$/.test(bankReference.trim()))
+                    }
                     onClick={() => void review("APPROVE")}
                   >
                     Confirm payment & unlock course

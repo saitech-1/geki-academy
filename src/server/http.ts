@@ -14,6 +14,7 @@ export interface Request {
   requestId: string;
   deviceId?: string;
   file?: { path: string; filename: string; mimetype: string; size: number };
+  receipt?: { bytes: Buffer; path: string };
 }
 export class Response {
   private code = 200;

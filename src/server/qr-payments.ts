@@ -1,10 +1,22 @@
 import { createEndpoints, type Request, type Response } from "./http";
+import {
+  createReceiptUpload,
+  readReceiptUpload,
+  receiptDownload,
+  receiptStorageConfigured,
+  ensurePrivateReceiptStorage,
+} from "./receipt-storage";
 import { receiveUpload } from "./uploads";
 import { rateLimit } from "./rate-limit";
-import { randomUUID, createHash } from "node:crypto";
-import { mkdir, readFile, unlink } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { readFile, unlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { z } from "zod";
+import {
+  priceForCheckout,
+  lockCourse,
+  assertPriceReservation,
+} from "./course-pricing";
 import { db, lockUser } from "./db";
 import { config } from "./config";
 import { HttpError, requireCondition } from "./domain";
@@ -27,10 +39,23 @@ const select = {
   reviewedAt: true,
   reviewReason: true,
   createdAt: true,
+  updatedAt: true,
   qrImage: true,
   recipient: true,
   course: { select: { title: true, slug: true } },
 } as const;
+const receiptLimit = rateLimit({
+  windowMs: 3600000,
+  limit: 10,
+  keyGenerator: (req) => req.account.id,
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  handler: (_req, res) =>
+    res.status(429).json({
+      code: "PAYMENT_RATE_LIMIT",
+      error: "Too many receipt uploads. Try again later or contact GEKI.",
+    }),
+});
 const id = (req: Request) => z.string().min(1).parse(req.params.id);
 function requireBuyer(req: Request) {
   requireCondition(
@@ -48,12 +73,20 @@ function requireBuyer(req: Request) {
 }
 qrCheckout.post("/", async (req, res) => {
   requireBuyer(req);
+  if (receiptStorageConfigured()) await ensurePrivateReceiptStorage();
+  requireCondition(
+    !process.env.VERCEL || receiptStorageConfigured(),
+    503,
+    "RECEIPT_STORAGE_UNAVAILABLE",
+    "Payment is temporarily unavailable while private receipt storage is configured. Please contact GEKI before paying.",
+  );
   const { courseId } = z
     .object({ courseId: z.string().min(1) })
     .strict()
     .parse(req.body);
   const order = await db.$transaction(async (tx) => {
     await lockUser(tx, req.account.id);
+    await lockCourse(tx, courseId);
     const course = await tx.course.findUnique({ where: { id: courseId } });
     requireCondition(
       course?.status === "PUBLISHED",
@@ -78,29 +111,68 @@ qrCheckout.post("/", async (req, res) => {
         ? "This course purchase needs support review. Contact GEKI before paying again."
         : "You already own this course. Open it in My Courses.",
     );
+    const existing = await tx.paymentOrder.findUnique({
+      where: { userId_courseId: { userId: req.account.id, courseId } },
+    });
+    if (existing && ["SUBMITTED", "APPROVED"].includes(existing.status))
+      return tx.paymentOrder.findUniqueOrThrow({
+        where: { id: existing.id },
+        select,
+      });
+    if (existing && existing.updatedAt.getTime() > Date.now() - 24 * 3600000)
+      return tx.paymentOrder.findUniqueOrThrow({
+        where: { id: existing.id },
+        select,
+      });
+    const price = await priceForCheckout(tx, course, existing?.id);
     return tx.paymentOrder.upsert({
       where: { userId_courseId: { userId: req.account.id, courseId } },
       create: {
         userId: req.account.id,
         courseId,
-        amountMinor: course.priceMinor,
+        amountMinor: price.amountMinor,
         currency: course.currency,
         qrImage,
         recipient,
       },
-      update: {},
+      update: { amountMinor: price.amountMinor, updatedAt: new Date() },
       select,
     });
   });
-  res.json(order);
+  res.json({
+    ...order,
+    receiptUpload:
+      receiptStorageConfigured() || process.env.VERCEL ? "direct" : "local",
+  });
+});
+qrCheckout.get("/quote/:courseId", async (req, res) => {
+  const courseId = z.string().min(1).parse(req.params.courseId);
+  const quote = await db.$transaction(async (tx) => {
+    await lockCourse(tx, courseId);
+    const course = await tx.course.findUnique({ where: { id: courseId } });
+    requireCondition(
+      course?.status === "PUBLISHED" && course.priceMinor,
+      404,
+      "NOT_FOUND",
+      "Course unavailable.",
+    );
+    return priceForCheckout(tx, course);
+  });
+  res.json(quote);
 });
 learnerPayments.get("/", async (req, res) =>
   res.json(
-    await db.paymentOrder.findMany({
-      where: { userId: req.account.id },
-      orderBy: { createdAt: "desc" },
-      select,
-    }),
+    (
+      await db.paymentOrder.findMany({
+        where: { userId: req.account.id },
+        orderBy: { createdAt: "desc" },
+        select,
+      })
+    ).map((order) => ({
+      ...order,
+      receiptUpload:
+        receiptStorageConfigured() || process.env.VERCEL ? "direct" : "local",
+    })),
   ),
 );
 learnerPayments.get("/:id", async (req, res) => {
@@ -109,22 +181,29 @@ learnerPayments.get("/:id", async (req, res) => {
     select,
   });
   requireCondition(order, 404, "NOT_FOUND", "Payment request not found.");
-  res.json(order);
+  res.json({
+    ...order,
+    receiptUpload:
+      receiptStorageConfigured() || process.env.VERCEL ? "direct" : "local",
+  });
+});
+learnerPayments.post("/:id/upload", receiptLimit, async (req, res) => {
+  requireBuyer(req);
+  const order = await db.paymentOrder.findFirst({
+    where: { id: id(req), userId: req.account.id },
+  });
+  requireCondition(
+    order && ["AWAITING_PAYMENT", "REJECTED"].includes(order.status),
+    409,
+    "PAYMENT_LOCKED",
+    "Open an available payment order first.",
+  );
+  assertPriceReservation(order);
+  res.json(await createReceiptUpload(req.account.id, order.id));
 });
 learnerPayments.post(
   "/:id/proof",
-  rateLimit({
-    windowMs: 3600000,
-    limit: 10,
-    keyGenerator: (req) => req.account.id,
-    standardHeaders: "draft-8",
-    legacyHeaders: false,
-    handler: (_req, res) =>
-      res.status(429).json({
-        code: "PAYMENT_RATE_LIMIT",
-        error: "Too many receipt uploads. Try again later or contact GEKI.",
-      }),
-  }),
+  receiptLimit,
   async (req, _res, next) => {
     requireBuyer(req);
     const order = await db.paymentOrder.findFirst({
@@ -137,6 +216,21 @@ learnerPayments.post(
       "PAYMENT_LOCKED",
       "This payment has already been submitted. Wait for review before sending another receipt.",
     );
+    if (req.body.uploadToken) {
+      req.receipt = await readReceiptUpload(
+        z.string().max(2000).parse(req.body.uploadToken),
+        req.account.id,
+        order.id,
+      );
+      next();
+      return;
+    }
+    requireCondition(
+      !process.env.VERCEL && !receiptStorageConfigured(),
+      400,
+      "DIRECT_UPLOAD_REQUIRED",
+      "Use the secure receipt photo upload.",
+    );
     await receiveUpload(req, {
       field: "proof",
       directory: resolve(config.uploadDir, "payment-proofs"),
@@ -145,27 +239,23 @@ learnerPayments.post(
   },
   async (req, res) => {
     requireCondition(
-      req.file,
+      req.file || req.receipt,
       400,
       "PROOF_REQUIRED",
       "Attach a PNG or JPEG payment receipt.",
     );
     let keep = false;
     try {
-      const transactionId = z
-        .string()
-        .trim()
-        .transform((v) => v.toUpperCase().replace(/[\s-]/g, ""))
-        .pipe(
-          z
+      // Older clients may still supply a reference; a receipt alone is sufficient.
+      const transactionId = req.body.transactionId
+        ? z
             .string()
-            .regex(
-              /^[A-Z0-9]{6,64}$/,
-              "Enter the transaction ID from your KBZPay receipt.",
-            ),
-        )
-        .parse(req.body.transactionId);
-      const bytes = await readFile(req.file.path);
+            .trim()
+            .transform((v) => v.toUpperCase().replace(/[\s-]/g, ""))
+            .pipe(z.string().regex(/^[A-Z0-9]{6,64}$/))
+            .parse(req.body.transactionId)
+        : null;
+      const bytes = req.receipt?.bytes || (await readFile(req.file!.path));
       const png = bytes
         .subarray(0, 8)
         .equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]));
@@ -194,22 +284,31 @@ learnerPayments.post(
           "REVIEW_LIMIT",
           "Contact GEKI for help after repeated payment rejections.",
         );
+        await lockCourse(tx, old.courseId);
+        assertPriceReservation(old);
         const duplicate = await tx.paymentOrder.findFirst({
-          where: { id: { not: old.id }, OR: [{ transactionId }, { proofSha }] },
-        });
-        const used = await tx.coursePurchase.findFirst({
           where: {
-            paymentReference: {
-              in: [transactionId, "KBZPAY:" + transactionId],
-            },
+            id: { not: old.id },
+            OR: [...(transactionId ? [{ transactionId }] : []), { proofSha }],
           },
         });
+        const used = transactionId
+          ? await tx.coursePurchase.findFirst({
+              where: {
+                paymentReference: {
+                  in: [transactionId, "KBZPAY:" + transactionId],
+                },
+              },
+            })
+          : null;
         const claimedBefore = await tx.auditEvent.findFirst({
           where: {
             action: "PAYMENT_PROOF_SUBMITTED",
             target: { not: old.id },
             OR: [
-              { data: { path: ["transactionId"], equals: transactionId } },
+              ...(transactionId
+                ? [{ data: { path: ["transactionId"], equals: transactionId } }]
+                : []),
               { data: { path: ["proofSha"], equals: proofSha } },
             ],
           },
@@ -218,7 +317,7 @@ learnerPayments.post(
           !duplicate && !used && !claimedBefore,
           409,
           "PAYMENT_EVIDENCE_USED",
-          "That transaction ID or receipt has already been submitted. Contact GEKI if you need help.",
+          "That receipt or payment reference has already been submitted. Contact GEKI if you need help.",
         );
         const updated = await tx.paymentOrder.update({
           where: { id: old.id },
@@ -226,7 +325,8 @@ learnerPayments.post(
             status: "SUBMITTED",
             transactionId,
             proofSha,
-            proofPath: "payment-proofs/" + req.file!.filename,
+            proofPath:
+              req.receipt?.path || "payment-proofs/" + req.file!.filename,
             proofMime: png ? "image/png" : "image/jpeg",
             submittedAt: new Date(),
             reviewedAt: null,
@@ -253,9 +353,13 @@ learnerPayments.post(
         return updated;
       });
       keep = true;
-      res.json(order);
+      res.json({
+        ...order,
+        receiptUpload:
+          receiptStorageConfigured() || process.env.VERCEL ? "direct" : "local",
+      });
     } finally {
-      if (!keep) await unlink(req.file.path).catch(() => {});
+      if (!keep && req.file) await unlink(req.file.path).catch(() => {});
     }
   },
 );
@@ -269,6 +373,12 @@ async function proof(req: Request, res: Response) {
     },
   });
   requireCondition(order?.proofPath, 404, "NOT_FOUND", "Receipt not found.");
+  if (order.proofPath.startsWith("supabase:")) {
+    res.type(order.proofMime || "image/jpeg");
+    res.setHeader("Cache-Control", "private, no-store");
+    res.send(await receiptDownload(order.proofPath));
+    return;
+  }
   await sendLocalMedia(
     req,
     res,
@@ -300,6 +410,12 @@ adminPayments.post("/:id/review", async (req, res) => {
   const input = ReasonInput.extend({
     decision: z.enum(["APPROVE", "REJECT"]),
     verifiedInKbzPay: z.boolean().default(false),
+    bankReference: z
+      .string()
+      .trim()
+      .transform((v) => v.toUpperCase().replace(/[\s-]/g, ""))
+      .pipe(z.string().regex(/^[A-Z0-9]{6,64}$/))
+      .optional(),
   })
     .strict()
     .parse(req.body);
@@ -319,6 +435,7 @@ adminPayments.post("/:id/review", async (req, res) => {
   );
   const order = await db.$transaction(async (tx) => {
     await lockUser(tx, existing.userId);
+    await lockCourse(tx, existing.courseId);
     const current = await tx.paymentOrder.findUniqueOrThrow({
       where: { id: existing.id },
     });
@@ -328,9 +445,7 @@ adminPayments.post("/:id/review", async (req, res) => {
         select,
       });
     requireCondition(
-      current.status === "SUBMITTED" &&
-        current.transactionId &&
-        current.proofPath,
+      current.status === "SUBMITTED" && current.proofPath,
       409,
       "PAYMENT_NOT_PENDING",
       "This payment is not waiting for review. Refresh the review queue.",
@@ -350,11 +465,26 @@ adminPayments.post("/:id/review", async (req, res) => {
         "PURCHASE_EXISTS",
         "This learner already has a course purchase. Check for duplicate payment before taking action.",
       );
+      const bankReference = input.bankReference || current.transactionId;
+      requireCondition(
+        bankReference,
+        400,
+        "BANK_REFERENCE_REQUIRED",
+        "Read the payment reference in your own KBZPay account and record it before approving.",
+      );
+      requireCondition(
+        !(await tx.coursePurchase.findUnique({
+          where: { paymentReference: "KBZPAY:" + bankReference },
+        })),
+        409,
+        "PAYMENT_EVIDENCE_USED",
+        "This incoming KBZPay payment has already been used for a course purchase.",
+      );
       await tx.coursePurchase.create({
         data: {
           userId: current.userId,
           courseId: current.courseId,
-          paymentReference: "KBZPAY:" + current.transactionId,
+          paymentReference: "KBZPAY:" + bankReference,
           amountMinor: current.amountMinor,
           currency: current.currency,
         },
@@ -402,5 +532,9 @@ adminPayments.post("/:id/review", async (req, res) => {
     });
     return updated;
   });
-  res.json(order);
+  res.json({
+    ...order,
+    receiptUpload:
+      receiptStorageConfigured() || process.env.VERCEL ? "direct" : "local",
+  });
 });

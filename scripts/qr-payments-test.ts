@@ -68,7 +68,8 @@ try {
   const admin = await login("admin@geki.local");
   const a = await buyer(),
     b = await buyer(),
-    browser = await buyer();
+    browser = await buyer(),
+    devicesBuyer = await buyer();
   const course = await db.course.create({
     data: {
       title: "KBZPay QR verification package",
@@ -247,12 +248,25 @@ try {
         `/me/payment-orders/${order.id}/proof`,
         a.token,
         "POST",
-        evidence(txid+"CORRECTED"),
+        evidence(txid + "CORRECTED"),
       )
     ).status,
     200,
   );
-  assert.equal((await call(`/me/payment-orders/${other.id}/proof`,b.token,"POST",evidence(txid,Buffer.concat([bytes,Buffer.from("reused-old-reference")])))).status,409);
+  assert.equal(
+    (
+      await call(
+        `/me/payment-orders/${other.id}/proof`,
+        b.token,
+        "POST",
+        evidence(
+          txid,
+          Buffer.concat([bytes, Buffer.from("reused-old-reference")]),
+        ),
+      )
+    ).status,
+    409,
+  );
   const approvals = await Promise.all([
     review({ decision: "APPROVE", verifiedInKbzPay: true, reason }),
     review({ decision: "APPROVE", verifiedInKbzPay: true, reason }),
@@ -291,12 +305,180 @@ try {
       })
     ).revokedAt,
   );
+  // A learner submits only a photo; the administrator records the bank reference.
+  const photoOnly = new FormData();
+  photoOnly.set(
+    "proof",
+    new Blob([Buffer.concat([bytes, Buffer.from("photo-only")])], {
+      type: "image/jpeg",
+    }),
+    "receipt.jpg",
+  );
+  const photoSubmitted = await call(
+    `/me/payment-orders/${other.id}/proof`,
+    b.token,
+    "POST",
+    photoOnly,
+  );
+  assert.equal(photoSubmitted.status, 200);
+  assert.equal(photoSubmitted.data.transactionId, null);
+  assert.equal(
+    (
+      await call(`/admin/payment-orders/${other.id}/review`, admin, "POST", {
+        decision: "APPROVE",
+        verifiedInKbzPay: true,
+        reason,
+      })
+    ).status,
+    400,
+  );
+  assert.equal(
+    (
+      await call(`/admin/payment-orders/${other.id}/review`, admin, "POST", {
+        decision: "APPROVE",
+        verifiedInKbzPay: true,
+        bankReference: txid + "CORRECTED",
+        reason,
+      })
+    ).status,
+    409,
+  );
+  assert.equal(
+    (
+      await call(`/admin/payment-orders/${other.id}/review`, admin, "POST", {
+        decision: "APPROVE",
+        verifiedInKbzPay: true,
+        bankReference: txid + "PHOTOONLY",
+        reason,
+      })
+    ).status,
+    200,
+  );
+  assert.equal(
+    (
+      await db.coursePurchase.findUniqueOrThrow({
+        where: { userId_courseId: { userId: b.user.id, courseId: course.id } },
+      })
+    ).amountMinor,
+    5000000,
+  );
+
+  const original = await db.course.findUniqueOrThrow({
+    where: { slug: "geki-kihon-package" },
+  });
+  const fixtureSuffix = randomUUID();
+  let pricingCourse: { id: string } | undefined;
+  const fixtureUsers: string[] = [];
+  await db.course.update({
+    where: { id: original.id },
+    data: { slug: "original-kihon-" + fixtureSuffix },
+  });
+  try {
+    pricingCourse = await db.course.create({
+      data: {
+        title: "Founding pricing test",
+        slug: "geki-kihon-package",
+        description: "Local fixture",
+        status: "PUBLISHED",
+        kbzPayEnabled: true,
+        priceMinor: 5000000,
+        currency: "MMK",
+      },
+    });
+    for (let i = 0; i < 49; i++) {
+      const u = await db.user.create({
+        data: {
+          firebaseUid: `pricing-${fixtureSuffix}-${i}`,
+          email: `pricing-${i}@geki.local`,
+          displayName: "Pricing fixture",
+        },
+      });
+      fixtureUsers.push(u.id);
+      await db.coursePurchase.create({
+        data: {
+          userId: u.id,
+          courseId: pricingCourse.id,
+          amountMinor: 3500000,
+          currency: "MMK",
+          paymentReference: `pricing-${fixtureSuffix}-${i}`,
+        },
+      });
+    }
+    const results = await Promise.all(
+      [a, b].map((u) =>
+        call("/checkout", u.token, "POST", { courseId: pricingCourse!.id }),
+      ),
+    );
+    assert.deepEqual(
+      results.map((r) => r.status),
+      [200, 200],
+    );
+    assert.deepEqual(
+      results.map((r) => r.data.amountMinor).sort(),
+      [3500000, 5000000],
+    );
+    const discounted = results.find((r) => r.data.amountMinor === 3500000)!;
+    assert.equal(
+      (await call("/checkout/quote/" + pricingCourse.id, browser.token)).data
+        .amountMinor,
+      5000000,
+    );
+    await db.paymentOrder.update({
+      where: { id: discounted.data.id },
+      data: { updatedAt: new Date(Date.now() - 25 * 3600000) },
+    });
+    const expiredPhoto = new FormData();
+    expiredPhoto.set(
+      "proof",
+      new Blob([bytes], { type: "image/jpeg" }),
+      "receipt.jpg",
+    );
+    const owner = discounted.data.id === results[0].data.id ? a : b;
+    assert.equal(
+      (
+        await call(
+          `/me/payment-orders/${discounted.data.id}/proof`,
+          owner.token,
+          "POST",
+          expiredPhoto,
+        )
+      ).data.code,
+      "ORDER_EXPIRED",
+    );
+    assert.equal(
+      (
+        await call("/checkout", browser.token, "POST", {
+          courseId: pricingCourse.id,
+        })
+      ).data.amountMinor,
+      3500000,
+    );
+    console.log(
+      "Founding price: 49 paid + concurrent final place, normal 50,000, and expired reservation checks passed",
+    );
+  } finally {
+    if (pricingCourse) {
+      await db.paymentOrder.deleteMany({
+        where: { courseId: pricingCourse.id },
+      });
+      await db.coursePurchase.deleteMany({
+        where: { courseId: pricingCourse.id },
+      });
+      await db.course.delete({ where: { id: pricingCourse.id } });
+    }
+    await db.user.deleteMany({ where: { id: { in: fixtureUsers } } });
+    await db.course.update({
+      where: { id: original.id },
+      data: { slug: original.slug },
+    });
+  }
   await writeFile(
     ".local/qr-payment-fixture.json",
     JSON.stringify({
       courseId: course.id,
       slug: course.slug,
       email: browser.email,
+      deviceEmail: devicesBuyer.email,
       password: "GekiLocal!2026",
     }),
   );

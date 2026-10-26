@@ -10,7 +10,14 @@ import type {
   Attempt,
   Question,
 } from "@/lib/types";
-import { api, json, deviceKey, deviceStorageName, ApiError } from "@/lib/api";
+import {
+  api,
+  json,
+  deviceKey,
+  deviceStorageName,
+  registerCurrentDevice,
+  ApiError,
+} from "@/lib/api";
 import { useAuth, useData } from "./providers";
 import { loadVideoBridge, type VideoControl } from "@/lib/video-player";
 import {
@@ -311,15 +318,7 @@ export function LessonPage({
     try {
       let data: Playback;
       if (canAccessCourse && (!publicPreview || !lesson?.preview)) {
-        await api("/me/devices", {
-          method: "POST",
-          body: json({
-            key: deviceKey(),
-            label: /Mobile|Android|iPhone/i.test(navigator.userAgent)
-              ? "Mobile browser"
-              : "Desktop browser",
-          }),
-        });
+        await registerCurrentDevice();
         data = await api<Playback>("/me/playback/" + selected, {
           method: "POST",
           body: json({ transfer: force }),
@@ -916,13 +915,26 @@ export function AccountPage({ route }: { route: string }) {
   );
 }
 export function DevicesPage() {
-  const { account } = useAuth();
+  const { account, deviceNotice, refresh } = useAuth();
   const { data, error, loading, reload } = useData<Devices>(
     account ? "/me/devices" : null,
   );
   const [remove, setRemove] = useState<string | null>(null);
   const [failure, setFailure] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    const refreshDevices = () => {
+      if (document.visibilityState === "visible") reload();
+    };
+    window.addEventListener("focus", refreshDevices);
+    document.addEventListener("visibilitychange", refreshDevices);
+    const timer = window.setInterval(refreshDevices, 15000);
+    return () => {
+      window.removeEventListener("focus", refreshDevices);
+      document.removeEventListener("visibilitychange", refreshDevices);
+      window.clearInterval(timer);
+    };
+  }, [reload]);
   async function revoke() {
     if (!remove) return;
     setBusy(true);
@@ -960,14 +972,43 @@ export function DevicesPage() {
               <div className="device-card" key={d.id}>
                 <Icon name="devices" />
                 <div className="device-copy">
-                  <h4>{d.label}</h4>
+                  <h4>
+                    {d.label} {d.current ? <Badge>Current device</Badge> : null}
+                  </h4>
                   <p>Last active {when(d.lastSeenAt)}</p>
                 </div>
                 <button onClick={() => setRemove(d.id)}>Remove</button>
               </div>
             ))}
             {!data?.devices.length ? (
-              <p>Devices are registered when you start a paid lesson.</p>
+              <p>Devices are registered when you sign in.</p>
+            ) : null}
+            {!data?.devices.some((d) => d.current) ? (
+              <div className="stack">
+                {deviceNotice ? <p>{deviceNotice}</p> : null}
+                <Button
+                  disabled={busy}
+                  onClick={async () => {
+                    setBusy(true);
+                    setFailure("");
+                    try {
+                      await registerCurrentDevice();
+                      await refresh();
+                      reload();
+                    } catch (e) {
+                      setFailure(
+                        e instanceof Error
+                          ? e.message
+                          : "Unable to register this device.",
+                      );
+                    } finally {
+                      setBusy(false);
+                    }
+                  }}
+                >
+                  Register this browser
+                </Button>
+              </div>
             ) : null}
             <Message>
               {data?.replacementsRemaining ?? 2} replacements available in the

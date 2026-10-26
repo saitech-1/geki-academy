@@ -1,4 +1,5 @@
 "use client";
+import { RevealSection } from "./motion";
 import { KbzPayCheckout } from "./qr-payments";
 import { useState } from "react";
 import Link from "next/link";
@@ -94,7 +95,7 @@ export function Home() {
           <a href="#about">SCROLL TO DISCOVER ↓</a>
         </div>
       </section>
-      <section className="section shell" id="about">
+      <RevealSection className="section shell" id="about">
         <div className="intro">
           <div className="eyebrow">DISCOVER GEKI</div>
           <div className="stack">
@@ -115,8 +116,8 @@ export function Home() {
           <span>↗</span>
           <span>Growth.</span>
         </div>
-      </section>
-      <section className="section shell">
+      </RevealSection>
+      <RevealSection className="section shell">
         <div className="section-head">
           <div className="stack">
             <div className="eyebrow">YOUR FOUNDATION STARTS HERE</div>
@@ -143,8 +144,8 @@ export function Home() {
             <p>Check back soon for published lessons.</p>
           </Empty>
         )}
-      </section>
-      <section className="section shell">
+      </RevealSection>
+      <RevealSection className="section shell">
         <div className="feature">
           <div className="feature-photo">
             <img src="/images/kumite.jpg" alt="Kyokushin training reference" />
@@ -178,7 +179,7 @@ export function Home() {
             </Button>
           </div>
         </div>
-      </section>
+      </RevealSection>
       <section className="closing">
         <div className="shell">
           <div className="eyebrow">YOUR NEXT CHAPTER</div>

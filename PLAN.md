@@ -30,7 +30,7 @@ CoursePurchase is the source of paid access. Historical memberships do not unloc
 2. Preserve existing handlers behind native Next.js Request/Response handling, multipart validation, error mapping and non-cacheable responses.
 3. Run type/unit/build checks and the authenticated API/payment regressions through the Next.js HTTP server. Push the migration on its review branch.
 4. Change Vercel Root Directory to the repository root and deploy the tested commit with the already configured Production environment. Confirm Firebase authorized domains and sign-in, catalog, paid access, progress and administrator roles against production.
-5. Connect persistent private direct-upload storage for cloud source videos and receipts before enabling the complete paid checkout/upload workflow on Vercel. Migrate any required existing private source assets explicitly.
+5. Provision and verify the implemented private Supabase receipt bucket before enabling paid checkout on Vercel; connect private direct-upload storage for cloud source videos separately. Migrate any required existing private source assets explicitly.
 6. Complete editorial EN/MM content review, guardian and privacy acceptance, live provider/browser checks, failure handling, release protection and production observability before the paid launch.
 
 ## Remaining risks

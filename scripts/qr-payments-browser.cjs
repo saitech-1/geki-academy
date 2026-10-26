@@ -18,10 +18,15 @@ const { chromium } = require("playwright");
     ],
   });
   try {
-    let student = await b.newPage({ viewport: { width: 1280, height: 850 } });
+    let student = await b.newPage({
+      viewport: { width: 1280, height: 850 },
+      reducedMotion: "reduce",
+    });
     const errors = [];
+    await student.route("https://fonts.googleapis.com/**", (r) => r.abort());
     student.on("pageerror", (e) => errors.push(e.message));
     async function login(p, email) {
+      await p.route("https://fonts.googleapis.com/**", (r) => r.abort());
       await p.goto(root + "/signin");
       await p.getByLabel("Account / guardian email").fill(email);
       await p.locator("input[name=password]").fill("GekiLocal!2026");
@@ -31,13 +36,14 @@ const { chromium } = require("playwright");
     await login(student, f.email);
     await student.goto(root + "/checkout/" + f.slug);
     await student
-      .getByRole("button", { name: "Pay with KBZPay", exact: true })
+      .getByRole("button", { name: "Continue to payment", exact: true })
       .click();
-    await student.getByAltText(/KBZPay QR code/).waitFor();
-    await student
-      .getByLabel("KBZPay transaction ID")
-      .fill("BROWSERQR" + Date.now());
-    await student.getByLabel("Payment receipt", { exact: true }).setInputFiles({
+    await student.getByAltText("GEKI Academy KBZPay payment QR").waitFor();
+    assert.equal(
+      await student.locator('input[name="transactionId"]').count(),
+      0,
+    );
+    await student.getByLabel("Receipt photo", { exact: true }).setInputFiles({
       name: "local-receipt-fixture.jpg",
       mimeType: "image/jpeg",
       buffer: Buffer.concat([
@@ -45,21 +51,10 @@ const { chromium } = require("playwright");
         Buffer.from("local-fixture-" + Date.now()),
       ]),
     });
-    await student
-      .getByLabel(
-        "I have paid the exact amount shown to the recipient on this QR.",
-      )
-      .check();
-    await student
-      .getByRole("button", { name: "Submit for verification" })
-      .click();
-    await student
-      .getByRole("heading", { name: "Thanks. We’re checking your payment." })
-      .waitFor();
+    await student.getByRole("button", { name: "Submit payment photo" }).click();
+    await student.getByRole("heading", { name: "Receipt received." }).waitFor();
     await student.reload();
-    await student
-      .getByRole("heading", { name: "Thanks. We’re checking your payment." })
-      .waitFor();
+    await student.getByRole("heading", { name: "Receipt received." }).waitFor();
     await student.screenshot({
       path: ".local/qr-pending-desktop.png",
       fullPage: true,
@@ -76,7 +71,10 @@ const { chromium } = require("playwright");
       fullPage: true,
     });
     await student.close();
-    const admin = await b.newPage({ viewport: { width: 1280, height: 850 } });
+    const admin = await b.newPage({
+      viewport: { width: 1280, height: 850 },
+      reducedMotion: "reduce",
+    });
     admin.on("pageerror", (e) => errors.push(e.message));
     await login(admin, "admin@geki.local");
     await admin.goto(root + "/admin/payments");
@@ -93,13 +91,19 @@ const { chromium } = require("playwright");
       )
       .check();
     await admin
+      .getByLabel("Incoming KBZPay reference (admin only)")
+      .fill("BROWSERQR" + Date.now());
+    await admin
       .getByLabel("Review reason", { exact: true })
       .fill("Local test fixture only; no real money received or transferred.");
     await admin.screenshot({ path: ".local/qr-admin-review.png" });
     await approve.click();
     await admin.locator("dialog[open]").waitFor({ state: "hidden" });
     await admin.close();
-    student = await b.newPage({ viewport: { width: 390, height: 844 } });
+    student = await b.newPage({
+      viewport: { width: 390, height: 844 },
+      reducedMotion: "reduce",
+    });
     student.on("pageerror", (e) => errors.push(e.message));
     await login(student, f.email);
     await student.goto(root + "/checkout/" + f.slug);

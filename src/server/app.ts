@@ -393,7 +393,11 @@ app.post("/api/me/devices", async (req, res) => {
         "DEVICE_REVOKED",
         "This registration has been revoked. Generate a new device key.",
       );
-      return { id: existing.id, label: existing.label };
+      return tx.device.update({
+        where: { id: existing.id },
+        data: { lastSeenAt: new Date(), label: input.label },
+        select: { id: true, label: true },
+      });
     }
     const count = await tx.device.count({
       where: { userId: req.account.id, revokedAt: null },
