@@ -27,6 +27,26 @@ body {
   color: var(--paper);
   -webkit-font-smoothing: antialiased;
 }
+html[lang="my"] {
+  font-family: "Noto Sans Myanmar", "Myanmar Text", sans-serif;
+}
+html[lang="my"] :is(h1, h2, h3, h4, .eyebrow, .btn, label) {
+  letter-spacing: normal;
+  line-height: 1.65;
+}
+html[lang="my"] .hero h1 {
+  font-size: clamp(32px, 4.8vw, 68px);
+  max-width: 900px;
+}
+html[lang="my"] .hero h1 span {
+  overflow-wrap: anywhere;
+}
+html[lang="my"] .hero-content {
+  gap: 22px;
+}
+html[lang="my"] .logotype {
+  font-family: Geist, Arial, sans-serif;
+}
 body:has(dialog[open]) {
   overflow: hidden;
 }
@@ -168,7 +188,7 @@ hr {
   color: var(--bg);
   padding: 14px;
 }
-.skip:focus {
+.skip:focus-visible {
   top: 10px;
 }
 .shell {

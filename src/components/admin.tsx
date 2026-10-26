@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "./locale";
 import { useState, useEffect, type FormEvent, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -108,6 +109,8 @@ export function AdminOverview() {
   );
 }
 export function AdminCourses() {
+  const { t } = useLocale();
+
   const { account } = useAuth();
   const { data, error, loading, reload } = useData<Course[]>(
     account && account.role !== "STUDENT" ? "/admin/courses" : null,
@@ -155,7 +158,7 @@ export function AdminCourses() {
         <Icon name="search" />
         <input
           aria-label="Search admin courses"
-          placeholder="Search courses"
+          placeholder={t("Search courses")}
           value={query}
           onChange={(event) => setQuery(event.target.value)}
         />
@@ -236,6 +239,8 @@ export function AdminCourses() {
   );
 }
 export function CourseEditor({ courseId }: { courseId: string }) {
+  const { t } = useLocale();
+
   const { account } = useAuth();
   const allowed = account && account.role !== "STUDENT";
   const {
@@ -474,7 +479,7 @@ export function CourseEditor({ courseId }: { courseId: string }) {
                       })
                     }
                   >
-                    Remove
+                    {t("Remove")}
                   </button>
                   {l.preview ? <Badge tone="free">Preview</Badge> : null}
                   <Button
@@ -696,6 +701,8 @@ function QuizEditor({
   course: Course;
   onSaved: () => void;
 }) {
+  const { t } = useLocale();
+
   const [open, setOpen] = useState(false);
   const [questions, setQuestions] = useState<Question[]>(
     course.quiz?.questions || [],
@@ -724,7 +731,7 @@ function QuizEditor({
   return (
     <>
       <div className="panel stack">
-        <h3>Final quiz</h3>
+        <h3>{t("Final quiz")}</h3>
         <p>80% passing score. Unlimited attempts.</p>
         <Button secondary onClick={() => setOpen(true)}>
           Edit questions
@@ -836,6 +843,8 @@ function QuizEditor({
   );
 }
 export function AdminVideos() {
+  const { t } = useLocale();
+
   const { account } = useAuth();
   const { data, error, loading, reload } = useData<Video[]>(
     account && account.role !== "STUDENT" ? "/admin/videos" : null,
@@ -1241,7 +1250,7 @@ export function AdminVideos() {
                 key={selected.id + lang + selected.updatedAt}
                 onSubmit={(e) => void subtitle(e, lang)}
               >
-                <h4>{lang === "en" ? "English" : "Burmese"} subtitles</h4>
+                <h4>{lang === "en" ? t("English") : "Burmese"} subtitles</h4>
                 <small>
                   Add the spoken words on the line below each timestamp. A
                   timeline without text cannot be approved or synced.
@@ -1594,6 +1603,8 @@ function ReasonModal({
   description?: string;
   confirmLabel?: string;
 }) {
+  const { t } = useLocale();
+
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
   return (
@@ -1619,7 +1630,7 @@ function ReasonModal({
         </label>
         {failure ? <Message error>{failure}</Message> : null}
         <Button type="submit" disabled={busy}>
-          {busy ? "Saving…" : confirmLabel}
+          {busy ? t("Saving…") : confirmLabel}
         </Button>
       </form>
     </Modal>

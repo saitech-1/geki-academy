@@ -102,8 +102,23 @@ async function checkHydration() {
         path: `.local/production-preview/home-${width}.png`,
         animations: "disabled",
       });
+      await page.getByLabel("Interface language").selectOption("mm");
+      await page.locator('html[lang="my"]').waitFor();
+      assert.match(await page.locator("h1").innerText(), /[\u1000-\u109f]/);
+      assert.equal(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth > innerWidth,
+        ),
+        false,
+      );
+      await page.screenshot({
+        path: `.local/production-preview/home-mm-${width}.png`,
+        animations: "disabled",
+      });
+      await page.reload();
+      await page.locator('html[lang="my"]').waitFor();
       results.push(
-        `${width}px: delayed hydration, scroll reveal, preference change, navigation and reload passed`,
+        `${width}px: delayed hydration, scroll reveal, preference change, EN/MM language persistence, navigation and reload passed`,
       );
       await ctx.close();
     }

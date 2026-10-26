@@ -39,6 +39,7 @@
     "start:live": "node --env-file=.env.production.local node_modules/next/dist/bin/next start --hostname 0.0.0.0 --port 3000",
     "test:auth-runtime": "node --no-experimental-require-module scripts/auth-runtime-check.cjs",
     "test:hydration": "node scripts/hydration-browser.cjs",
+    "test:localization": "node scripts/localization-browser.cjs",
     "test:preview": "node scripts/production-preview-check.cjs"
   },
   "dependencies": {

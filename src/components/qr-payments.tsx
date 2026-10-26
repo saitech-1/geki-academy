@@ -1,5 +1,12 @@
 "use client";
-import { useEffect, useState, type FormEvent } from "react";
+import { useLocale } from "./locale";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { api, apiBlob, json } from "@/lib/api";
 import type { Course } from "@/lib/types";
 import { useAuth, useData } from "./providers";
@@ -35,6 +42,8 @@ const stateLabel = (state: string) =>
     REJECTED: "Needs attention",
   })[state] || state;
 export function PendingPayments() {
+  const { t } = useLocale();
+
   const { account } = useAuth();
   const { data, error } = useData<Order[]>(
     account ? "/me/payment-orders" : null,
@@ -45,19 +54,19 @@ export function PendingPayments() {
       {error ? <Message error>{error}</Message> : null}
       {pending?.length ? (
         <section className="panel stack">
-          <h3>Your payment requests</h3>
+          <h3>{t("Your payment requests")}</h3>
           {pending.map((o) => (
             <div className="row between wrap" key={o.id}>
               <div>
                 <strong>{o.course.title}</strong>
                 <p>
-                  {money(o)} · {stateLabel(o.status)}
+                  {money(o)} · {t(stateLabel(o.status))}
                 </p>
               </div>
               <Button secondary href={"/checkout/" + o.course.slug}>
                 {o.status === "SUBMITTED"
-                  ? "View payment status"
-                  : "Continue payment"}
+                  ? t("View payment status")
+                  : t("Continue payment")}
               </Button>
             </div>
           ))}
@@ -120,6 +129,8 @@ export function ReceiptImage({
   );
 }
 export function KbzPayCheckout({ course }: { course: Course }) {
+  const { t } = useLocale();
+
   const { account, refresh } = useAuth();
   const { data: orders, reload } = useData<Order[]>(
     account ? "/me/payment-orders" : null,
@@ -133,6 +144,7 @@ export function KbzPayCheckout({ course }: { course: Course }) {
   const [current, setCurrent] = useState<Order | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
+  const opened = useRef("");
   const order = current || orders?.find((o) => o.courseId === course.id);
   const owned = account?.purchases.some(
     (p) => p.courseId === course.id && !p.revokedAt,
@@ -156,7 +168,7 @@ export function KbzPayCheckout({ course }: { course: Course }) {
       clearInterval(timer);
     };
   }, [order?.id, order?.status, refresh]);
-  async function begin() {
+  const begin = useCallback(async () => {
     setFailure("");
     setBusy(true);
     try {
@@ -171,7 +183,32 @@ export function KbzPayCheckout({ course }: { course: Course }) {
     } finally {
       setBusy(false);
     }
-  }
+  }, [course.id]);
+  useEffect(() => {
+    const key = account?.id + ":" + course.id;
+    if (
+      !account?.emailVerified ||
+      !account.onboarded ||
+      !orders ||
+      order ||
+      owned ||
+      !course.priceMinor ||
+      !course.kbzPayEnabled ||
+      opened.current === key
+    )
+      return;
+    opened.current = key;
+    void begin();
+  }, [
+    account,
+    course.id,
+    course.priceMinor,
+    course.kbzPayEnabled,
+    orders,
+    order,
+    owned,
+    begin,
+  ]);
   async function submit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!order) return;
@@ -233,33 +270,35 @@ export function KbzPayCheckout({ course }: { course: Course }) {
   return (
     <>
       <Heading
-        eyebrow="COURSE PAYMENT"
+        eyebrow={t("COURSE PAYMENT")}
         title={course.title}
-        description="Pay once. Keep ongoing course access."
+        description={t("Pay once. Keep ongoing course access.")}
       />
       {failure ? <Message error>{failure}</Message> : null}
       {owned || order?.status === "APPROVED" ? (
         <section className="panel stack">
-          <Badge tone="green">Payment confirmed</Badge>
-          <h2>Your course is ready.</h2>
-          <Button href={"/courses/" + course.slug}>Start your course</Button>
+          <Badge tone="green">{t("Payment confirmed")}</Badge>
+          <h2>{t("Your course is ready.")}</h2>
+          <Button href={"/courses/" + course.slug}>
+            {t("Start your course")}
+          </Button>
         </section>
       ) : (
         <div className="qr-checkout-grid">
           <section className="panel stack qr-payment-panel">
-            <div className="eyebrow">KBZPAY · ONE-TIME PAYMENT</div>
+            <div className="eyebrow">{t("1. SCAN PAYMENT QR")}</div>
             <div className="payment-total">
-              {total ? money(total) : "Price to be announced"}
+              {total ? money(total) : t("Price to be announced")}
             </div>
             {founding ? (
               <div className="stack">
-                <Badge>Founding learner · 30% off</Badge>
+                <Badge>{t("Founding learner · 30% off")}</Badge>
                 <p>
-                  <s>50,000 MMK</s> · First 50 paying Kihon learners.
+                  <s>50,000 MMK</s> {t("· First 50 paying Kihon learners.")}
                 </p>
               </div>
             ) : null}
-            {order && !expired ? (
+            {order && !expired && order.status !== "SUBMITTED" ? (
               <>
                 <img
                   className="payment-qr"
@@ -271,25 +310,35 @@ export function KbzPayCheckout({ course }: { course: Course }) {
                   href={order.qrImage}
                   download="GEKI-KBZPay-QR.jpg"
                 >
-                  Save QR image ↓
+                  {t("Save QR image ↓")}
                 </a>
                 <p>
-                  Pay <strong>{money(order)}</strong> to{" "}
-                  <strong>{order.recipient}</strong>.
+                  {t("Amount")}: <strong>{money(order)}</strong>
+                </p>
+                <p>
+                  {t("Recipient")}: <strong>{order.recipient}</strong>
                 </p>
                 {order.status !== "SUBMITTED" ? (
                   <small>
-                    Complete payment and upload your receipt within 24 hours of
-                    opening this order. Your quoted price is reserved during
-                    this window.
+                    {t(
+                      "Complete payment and upload your receipt within 24 hours of opening this order. Your quoted price is reserved during this window.",
+                    )}
                   </small>
                 ) : null}
               </>
             ) : (
               <p>
-                {expired
-                  ? "This payment window expired. Refresh the price before paying. If you already paid, contact GEKI before paying again."
-                  : "Open your order to reserve the exact price and view the payment QR."}
+                {order?.status === "SUBMITTED"
+                  ? t(
+                      "Screenshot submitted. Please do not pay again while your payment is under review.",
+                    )
+                  : expired
+                    ? t(
+                        "This payment window expired. Refresh the price before paying. If you already paid, contact GEKI before paying again.",
+                      )
+                    : t(
+                        "Open your order to reserve the exact price and view the payment QR.",
+                      )}
               </p>
             )}
             {!account ? (
@@ -299,7 +348,7 @@ export function KbzPayCheckout({ course }: { course: Course }) {
                   encodeURIComponent("/checkout/" + course.slug)
                 }
               >
-                Sign in to pay
+                {t("Sign in to pay")}
               </Button>
             ) : !order || expired ? (
               <Button
@@ -307,44 +356,52 @@ export function KbzPayCheckout({ course }: { course: Course }) {
                 onClick={() => void begin()}
               >
                 {busy
-                  ? "Preparing…"
+                  ? t("Preparing…")
                   : expired
-                    ? "Refresh payment price"
-                    : "Continue to payment"}
+                    ? t("Refresh payment price")
+                    : t("Show payment QR")}
               </Button>
             ) : null}
             {!course.kbzPayEnabled ? (
-              <small>QR payment is not available for this course yet.</small>
+              <small>
+                {t("QR payment is not available for this course yet.")}
+              </small>
             ) : null}
           </section>
           <section className="panel stack">
             {order?.status === "SUBMITTED" ? (
               <>
-                <Badge tone="amber">Under review</Badge>
-                <h3>Receipt received.</h3>
+                <Badge tone="amber">{t("Under review")}</Badge>
+                <h3>{t("Receipt received.")}</h3>
                 <p>
-                  GEKI will check the incoming payment and unlock your course
-                  after approval. You’ll receive a notification.
+                  {t(
+                    "GEKI will check the incoming payment and unlock your course after approval. You’ll receive a notification.",
+                  )}
                 </p>
                 <ReceiptImage orderId={order.id} />
               </>
             ) : (
               <>
-                <h3>Upload your payment photo</h3>
+                <div className="eyebrow">
+                  {t("2. UPLOAD PAYMENT SCREENSHOT")}
+                </div>
+                <h3>{t("Upload your payment screenshot")}</h3>
                 <p>
-                  Scan the QR, pay the exact amount, then upload the successful
-                  payment receipt.
+                  {t(
+                    "Scan the QR, pay the exact amount, then upload the successful payment receipt.",
+                  )}
                 </p>
                 {order?.status === "REJECTED" ? (
                   <Message error>
-                    {order.reviewReason || "Please upload a clearer receipt."}{" "}
-                    Don’t pay twice for a successful transfer.
+                    {order.reviewReason ||
+                      t("Please upload a clearer receipt.")}{" "}
+                    {t("Don’t pay twice for a successful transfer.")}
                   </Message>
                 ) : null}
                 {order && !expired ? (
                   <form className="stack" onSubmit={submit}>
                     <label>
-                      Receipt photo
+                      {t("Payment screenshot")}
                       <input
                         name="proof"
                         type="file"
@@ -353,22 +410,25 @@ export function KbzPayCheckout({ course }: { course: Course }) {
                       />
                     </label>
                     <small>
-                      PNG or JPEG, up to 5 MB. Keep the amount, recipient and
-                      successful payment details visible. No transaction ID to
-                      type.
+                      {t(
+                        "PNG or JPEG, up to 5 MB. Keep the amount, recipient and successful payment details visible. No transaction ID to type.",
+                      )}
                     </small>
                     <Button type="submit" disabled={busy}>
-                      {busy ? "Uploading…" : "Submit payment photo"}
+                      {busy
+                        ? t("Uploading…")
+                        : t("Submit screenshot for review")}
                     </Button>
                   </form>
                 ) : (
                   <p>
-                    Your receipt upload will appear after you open a payment
-                    order.
+                    {t(
+                      "Your receipt upload will appear after you open a payment order.",
+                    )}
                   </p>
                 )}
                 <small>
-                  Your course unlocks after GEKI verifies the payment.
+                  {t("Your course unlocks after GEKI verifies the payment.")}
                 </small>
               </>
             )}
@@ -380,6 +440,8 @@ export function KbzPayCheckout({ course }: { course: Course }) {
 }
 
 export function AdminPaymentReviews() {
+  const { t } = useLocale();
+
   const { account } = useAuth();
   const [filter, setFilter] = useState("SUBMITTED");
   const { data, error, loading, reload } = useData<Order[]>(
@@ -420,17 +482,19 @@ export function AdminPaymentReviews() {
   return (
     <>
       <Heading
-        eyebrow="PAYMENT OPERATIONS"
-        title="Verify. Then unlock."
-        description="Confirm incoming KBZPay transfers before granting course access."
+        eyebrow={t("PAYMENT OPERATIONS")}
+        title={t("Verify. Then unlock.")}
+        description={t(
+          "Confirm incoming KBZPay transfers before granting course access.",
+        )}
       />
       <label>
-        Payment status
+        {t("Payment status")}
         <select value={filter} onChange={(e) => setFilter(e.target.value)}>
           {["SUBMITTED", "APPROVED", "REJECTED", "AWAITING_PAYMENT", "ALL"].map(
             (s) => (
               <option key={s} value={s}>
-                {s === "ALL" ? "All payments" : stateLabel(s)}
+                {s === "ALL" ? t("All payments") : t(stateLabel(s))}
               </option>
             ),
           )}
@@ -452,7 +516,7 @@ export function AdminPaymentReviews() {
                   "Status",
                   "Review",
                 ].map((h) => (
-                  <th key={h}>{h}</th>
+                  <th key={h}>{t(h)}</th>
                 ))}
               </tr>
             </thead>
@@ -468,7 +532,7 @@ export function AdminPaymentReviews() {
                   <td>{o.transactionId || "See receipt"}</td>
                   <td>
                     <Badge tone={o.status === "APPROVED" ? "green" : "amber"}>
-                      {stateLabel(o.status)}
+                      {t(stateLabel(o.status))}
                     </Badge>
                   </td>
                   <td>
@@ -482,7 +546,7 @@ export function AdminPaymentReviews() {
                         setFailure("");
                       }}
                     >
-                      Review payment
+                      {t("Review payment")}
                     </Button>
                   </td>
                 </tr>
@@ -491,22 +555,24 @@ export function AdminPaymentReviews() {
           </table>
         </div>
       ) : (
-        <Empty title="No payments in this queue." />
+        <Empty title={t("No payments in this queue.")} />
       )}
       {selected ? (
         <Modal
-          title="Verify KBZPay payment"
+          title={t("Verify KBZPay payment")}
           dismissible={!busy}
           onClose={() => setSelected(null)}
         >
           <div className="stack">
-            <Badge>{stateLabel(selected.status)}</Badge>
+            <Badge>{t(stateLabel(selected.status))}</Badge>
             <h3>{selected.course.title}</h3>
             <div className="payment-total">{money(selected)}</div>
             <p>{selected.user?.email}</p>
-            <p>Recipient: {selected.recipient}</p>
             <p>
-              Transaction ID:{" "}
+              {t("Recipient:")} {selected.recipient}
+            </p>
+            <p>
+              {t("Transaction ID:")}{" "}
               <strong>
                 {selected.transactionId ||
                   "Shown on receipt — no typed ID required"}
@@ -515,7 +581,8 @@ export function AdminPaymentReviews() {
             {selected.submittedAt ? (
               <>
                 <small>
-                  Submitted {new Date(selected.submittedAt).toLocaleString()}
+                  {t("Submitted")}{" "}
+                  {new Date(selected.submittedAt).toLocaleString()}
                 </small>
                 <ReceiptImage orderId={selected.id} admin />
               </>
@@ -523,9 +590,9 @@ export function AdminPaymentReviews() {
             {selected.status === "SUBMITTED" ? (
               <>
                 <div className="notice">
-                  Open your own KBZPay incoming transactions. Match the exact
-                  transaction ID, received amount, recipient and successful
-                  status. Do not approve based only on the screenshot.
+                  {t(
+                    "Open your own KBZPay incoming transactions. Match the exact transaction ID, received amount, recipient and successful status. Do not approve based only on the screenshot.",
+                  )}
                 </div>
                 <label className="consent">
                   <input
@@ -534,29 +601,34 @@ export function AdminPaymentReviews() {
                     onChange={(e) => setVerified(e.target.checked)}
                   />
                   <span>
-                    I verified this successful incoming transaction in KBZPay
-                    and the amount and recipient match this order.
+                    {t(
+                      "I verified this successful incoming transaction in KBZPay and the amount and recipient match this order.",
+                    )}
                   </span>
                 </label>
                 {!selected.transactionId ? (
                   <label>
-                    Incoming KBZPay reference (admin only)
+                    {t("Incoming KBZPay reference (admin only)")}
                     <input
                       value={bankReference}
                       onChange={(e) => setBankReference(e.target.value)}
-                      placeholder="Reference from your own incoming payment record"
+                      placeholder={t(
+                        "Reference from your own incoming payment record",
+                      )}
                     />
                   </label>
                 ) : null}
                 <label>
-                  Review reason
+                  {t("Review reason")}
                   <textarea
                     required
                     minLength={8}
                     maxLength={500}
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
-                    placeholder="Record your check, or explain what the student must correct."
+                    placeholder={t(
+                      "Record your check, or explain what the student must correct.",
+                    )}
                   />
                 </label>
                 <div className="row wrap">
@@ -570,14 +642,14 @@ export function AdminPaymentReviews() {
                     }
                     onClick={() => void review("APPROVE")}
                   >
-                    Confirm payment & unlock course
+                    {t("Confirm payment & unlock course")}
                   </Button>
                   <Button
                     secondary
                     disabled={busy || reason.trim().length < 8}
                     onClick={() => void review("REJECT")}
                   >
-                    Request correction
+                    {t("Request correction")}
                   </Button>
                 </div>
               </>

@@ -64,14 +64,22 @@ export function useLocale() {
   if (!value) throw new Error("Locale provider missing");
   return value;
 }
+export function SkipLink() {
+  const { t } = useLocale();
+  return (
+    <a className="skip" href="#main">
+      {t("Skip to content")}
+    </a>
+  );
+}
 export function LanguageSelector() {
-  const { language, changeLanguage } = useLocale();
+  const { language, changeLanguage, t } = useLocale();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   return (
     <div className="language-control">
       <select
-        aria-label="Interface language"
+        aria-label={t("Interface language")}
         value={language}
         disabled={busy}
         onChange={(event) => {
@@ -88,7 +96,7 @@ export function LanguageSelector() {
         <option value="en">EN</option>
         <option value="mm">မြန်မာ</option>
       </select>
-      {error ? <span role="alert">{error}</span> : null}
+      {error ? <span role="alert">{t(error)}</span> : null}
     </div>
   );
 }

@@ -1,4 +1,5 @@
 "use client";
+import { useLocale, LanguageSelector } from "./locale";
 import { useEffect, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -17,6 +18,8 @@ import { api, json } from "@/lib/api";
 import { useAuth } from "./providers";
 import { Logo, Button, Icon, Message } from "./ui";
 export function AuthPage({ route }: { route: string }) {
+  const { language, t } = useLocale();
+
   const kind = route.slice(1);
   const router = useRouter();
   const { identity, refresh } = useAuth();
@@ -156,19 +159,22 @@ export function AuthPage({ route }: { route: string }) {
         <Logo />
         <div className="stack">
           <div className="eyebrow light">
-            TRADITIONAL SPIRIT. MODERN SCIENCE.
+            {t("TRADITIONAL SPIRIT. MODERN SCIENCE.")}
           </div>
           <h2>
-            Discipline.
+            {t("Discipline.")}
             <br />
-            In every detail.
+            {t("In every detail.")}
           </h2>
         </div>
       </section>
       <section className="auth-form-area">
         <div className="auth-form reveal">
-          <div className="eyebrow">GEKI ACADEMY</div>
-          <h1>{title}</h1>
+          <div className="row between">
+            <div className="eyebrow">GEKI ACADEMY</div>
+            <LanguageSelector />
+          </div>
+          <h1>{t(title)}</h1>
           {process.env.NEXT_PUBLIC_AUTH_EMULATOR_URL ? (
             <div className="notice auth-environment">
               <strong>Local test sign-in</strong>
@@ -193,21 +199,22 @@ export function AuthPage({ route }: { route: string }) {
           )}
           <p>
             {kind === "signin"
-              ? "Sign in to continue your learning journey."
+              ? t("Sign in to continue your learning journey.")
               : kind === "signup"
-                ? "One account. A clearer understanding."
-                : "Secure access to your learning account."}
+                ? t("One account. A clearer understanding.")
+                : t("Secure access to your learning account.")}
           </p>
           {error ? <Message error>{error}</Message> : null}
           {message ? <Message>{message}</Message> : null}
           {kind === "verify" ? (
             <>
               <p>
-                Use the verification link in your email. In the local emulator,
-                the link is printed in its terminal.
+                {t(
+                  "Use the verification link in your email. In the local emulator, the link is printed in its terminal.",
+                )}
               </p>
               <Button disabled={busy} onClick={() => void verify()}>
-                Resend verification email
+                {t("Resend verification email")}
               </Button>
               <Button
                 secondary
@@ -219,9 +226,9 @@ export function AuthPage({ route }: { route: string }) {
                     .then(() => router.push("/dashboard"))
                 }
               >
-                I’ve verified my email
+                {t("I’ve verified my email")}
               </Button>
-              <Link href="/signin">Back to sign in</Link>
+              <Link href="/signin">{t("Back to sign in")}</Link>
             </>
           ) : (
             <>
@@ -233,17 +240,17 @@ export function AuthPage({ route }: { route: string }) {
                     onClick={() => void google()}
                   >
                     {process.env.NEXT_PUBLIC_AUTH_EMULATOR_URL
-                      ? "Test Google sign-in"
-                      : "Continue with Google"}
+                      ? t("Test Google sign-in")
+                      : t("Continue with Google")}
                   </Button>
-                  <div className="divider">OR USE EMAIL</div>
+                  <div className="divider">{t("OR USE EMAIL")}</div>
                 </>
               ) : null}
               <form className="stack" onSubmit={submit}>
                 {kind === "signup" ? (
                   <>
                     <label>
-                      Learner display name
+                      {t("Learner display name")}
                       <input
                         name="displayName"
                         required
@@ -252,16 +259,18 @@ export function AuthPage({ route }: { route: string }) {
                       />
                     </label>
                     <label>
-                      Account type
+                      {t("Account type")}
                       <select name="accountType">
-                        <option value="ADULT">Myself · Age 18+</option>
-                        <option value="GUARDIAN">My child · Age 12–17</option>
+                        <option value="ADULT">{t("Myself · Age 18+")}</option>
+                        <option value="GUARDIAN">
+                          {t("My child · Age 12–17")}
+                        </option>
                       </select>
                     </label>
                     <label>
-                      Language
-                      <select name="language">
-                        <option value="en">English</option>
+                      {t("Language")}
+                      <select name="language" defaultValue={language}>
+                        <option value="en">{t("English")}</option>
                         <option value="mm">မြန်မာ</option>
                       </select>
                     </label>
@@ -269,7 +278,7 @@ export function AuthPage({ route }: { route: string }) {
                 ) : null}
                 {kind !== "reset" ? (
                   <label>
-                    Account / guardian email
+                    {t("Account / guardian email")}
                     <input
                       name="email"
                       type="email"
@@ -280,7 +289,7 @@ export function AuthPage({ route }: { route: string }) {
                 ) : null}
                 {["signin", "signup", "reset"].includes(kind) ? (
                   <label>
-                    Password
+                    {t("Password")}
                     <div className="password-wrap">
                       <input
                         name="password"
@@ -296,7 +305,9 @@ export function AuthPage({ route }: { route: string }) {
                       <button
                         type="button"
                         onClick={() => setVisible((v) => !v)}
-                        aria-label={visible ? "Hide password" : "Show password"}
+                        aria-label={
+                          visible ? t("Hide password") : t("Show password")
+                        }
                       >
                         <Icon name="settings" />
                       </button>
@@ -305,7 +316,7 @@ export function AuthPage({ route }: { route: string }) {
                 ) : null}
                 {kind === "reset" ? (
                   <label>
-                    Confirm password
+                    {t("Confirm password")}
                     <input
                       name="confirm"
                       type="password"
@@ -323,47 +334,48 @@ export function AuthPage({ route }: { route: string }) {
                       onChange={(e) => setConsent(e.target.checked)}
                     />
                     <span>
-                      I am 18+ or the parent/guardian of a learner aged 12–17. I
-                      consent to managing this learner’s account.
+                      {t(
+                        "I am 18+ or the parent/guardian of a learner aged 12–17. I consent to managing this learner’s account.",
+                      )}
                     </span>
                   </label>
                 ) : null}
                 {kind === "signin" ? (
                   <Link className="text-link" href="/forgot">
-                    Forgot password?
+                    {t("Forgot password?")}
                   </Link>
                 ) : null}
                 <Button type="submit" disabled={busy}>
                   {busy
-                    ? "Please wait…"
+                    ? t("Please wait…")
                     : kind === "signin"
-                      ? "Sign in"
+                      ? t("Sign in")
                       : kind === "signup"
-                        ? "Create account"
+                        ? t("Create account")
                         : kind === "reset"
-                          ? "Save password"
-                          : "Send reset link"}
+                          ? t("Save password")
+                          : t("Send reset link")}
                   <Icon name="arrow" />
                 </Button>
               </form>
               <p style={{ textAlign: "center", fontSize: 12 }}>
                 {kind === "signin" ? (
                   <>
-                    New to GEKI?{" "}
+                    {t("New to GEKI?")}{" "}
                     <Link className="light" href="/signup">
-                      Create an account
+                      {t("Create an account")}
                     </Link>
                   </>
                 ) : (
                   <Link className="light" href="/signin">
-                    Return to sign in
+                    {t("Return to sign in")}
                   </Link>
                 )}
               </p>
             </>
           )}
           <Link href="/preview" className="text-link">
-            Watch the free lesson <Icon name="play" />
+            {t("Watch the free lesson")} <Icon name="play" />
           </Link>
         </div>
       </section>

@@ -35,23 +35,24 @@ const { chromium } = require("playwright");
     }
     await login(student, f.email);
     await student.goto(root + "/checkout/" + f.slug);
-    await student
-      .getByRole("button", { name: "Continue to payment", exact: true })
-      .click();
     await student.getByAltText("GEKI Academy KBZPay payment QR").waitFor();
     assert.equal(
       await student.locator('input[name="transactionId"]').count(),
       0,
     );
-    await student.getByLabel("Receipt photo", { exact: true }).setInputFiles({
-      name: "local-receipt-fixture.jpg",
-      mimeType: "image/jpeg",
-      buffer: Buffer.concat([
-        fs.readFileSync("public/images/hero.jpg"),
-        Buffer.from("local-fixture-" + Date.now()),
-      ]),
-    });
-    await student.getByRole("button", { name: "Submit payment photo" }).click();
+    await student
+      .getByLabel("Payment screenshot", { exact: true })
+      .setInputFiles({
+        name: "local-receipt-fixture.jpg",
+        mimeType: "image/jpeg",
+        buffer: Buffer.concat([
+          fs.readFileSync("public/images/hero.jpg"),
+          Buffer.from("local-fixture-" + Date.now()),
+        ]),
+      });
+    await student
+      .getByRole("button", { name: "Submit screenshot for review" })
+      .click();
     await student.getByRole("heading", { name: "Receipt received." }).waitFor();
     await student.reload();
     await student.getByRole("heading", { name: "Receipt received." }).waitFor();

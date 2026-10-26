@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "./locale";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
 import { PendingPayments } from "./qr-payments";
@@ -31,8 +32,8 @@ import {
   ProgressBar,
   Modal,
 } from "./ui";
-const when = (value: string) =>
-  new Date(value).toLocaleDateString("en-GB", {
+const when = (value: string, language = "en") =>
+  new Date(value).toLocaleDateString(language === "mm" ? "my-MM" : "en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
@@ -42,6 +43,8 @@ export function DashboardPage({
 }: {
   learningOnly?: boolean;
 }) {
+  const { t, language } = useLocale();
+
   const { account } = useAuth();
   const { data, error, loading } = useData<Dashboard>(
     account ? "/me/dashboard" : null,
@@ -60,23 +63,23 @@ export function DashboardPage({
   return (
     <>
       <Heading
-        eyebrow={learningOnly ? "MY LEARNING" : "YOUR ACADEMY"}
+        eyebrow={learningOnly ? t("MY LEARNING") : t("YOUR ACADEMY")}
         title={
           learningOnly
-            ? "A practice worth returning to."
-            : "Your journey to mastery continues."
+            ? t("A practice worth returning to.")
+            : t("Your journey to mastery continues.")
         }
         description={
           account?.language === "mm"
             ? "သင်ယူမှုကို ဆက်လက်လုပ်ဆောင်ပါ"
-            : "Pick up where you left off. Bring one more detail into focus."
+            : t("Pick up where you left off. Bring one more detail into focus.")
         }
       />
       {!account?.onboarded ? (
         <Message>
-          Complete your learner profile in{" "}
-          <Link href="/settings">Settings</Link>, including adult or
-          parent-managed account details.
+          {t("Complete your learner profile in")}{" "}
+          <Link href="/settings">{t("Settings")}</Link>
+          {t(", including adult or parent-managed account details.")}
         </Message>
       ) : null}
       <div className="dashboard-grid">
@@ -85,7 +88,7 @@ export function DashboardPage({
             <div className="continue-card">
               <img src="/images/kumite.jpg" alt="Training reference" />
               <div className="stack">
-                <div className="eyebrow light">CONTINUE LEARNING</div>
+                <div className="eyebrow light">{t("CONTINUE LEARNING")}</div>
                 <h2>{lesson.title}</h2>
                 <p>{lesson.section.course.title}</p>
                 <ProgressBar
@@ -98,16 +101,18 @@ export function DashboardPage({
                 />
                 <div>
                   <Button href={"/lessons/" + lesson.id}>
-                    Resume lesson <Icon name="play" />
+                    {t("Resume lesson")} <Icon name="play" />
                   </Button>
                 </div>
               </div>
             </div>
           ) : (
-            <Empty title="Your practice starts here.">
-              <p>Explore an available course and open your first lesson.</p>
+            <Empty title={t("Your practice starts here.")}>
+              <p>
+                {t("Explore an available course and open your first lesson.")}
+              </p>
               <Button href="/courses">
-                Explore courses <Icon name="arrow" />
+                {t("Explore courses")} <Icon name="arrow" />
               </Button>
             </Empty>
           )}
@@ -120,19 +125,19 @@ export function DashboardPage({
                   / {total}
                 </span>
               </b>
-              <small>Lessons completed</small>
+              <small>{t("Lessons completed")}</small>
             </div>
             <div>
               <b>{data?.attempts.filter((a) => a.passed).length || 0}</b>
-              <small>Quiz passes</small>
+              <small>{t("Quiz passes")}</small>
             </div>
             <div>
               <b>{courses?.length || 0}</b>
-              <small>Available courses</small>
+              <small>{t("Available courses")}</small>
             </div>
           </div>
           <div className="block-head">
-            <h3>Your learning records</h3>
+            <h3>{t("Your learning records")}</h3>
           </div>
           <div className="mini-list">
             {data?.progress.map((p) => (
@@ -141,7 +146,7 @@ export function DashboardPage({
                   <h4>{p.video.title}</h4>
                   <p>
                     {p.completedAt
-                      ? "Completed"
+                      ? t("Completed")
                       : `Resume at ${Math.floor(p.position / 60)}:${String(Math.floor(p.position % 60)).padStart(2, "0")}`}
                   </p>
                 </div>
@@ -158,32 +163,36 @@ export function DashboardPage({
               }
             >
               {account?.purchases.some((p) => !p.revokedAt)
-                ? "Courses purchased"
-                : "Explore course packages"}
+                ? t("Courses purchased")
+                : t("Explore course packages")}
             </Badge>
             <h3>
               {account?.purchases.some((p) => !p.revokedAt)
-                ? "Your academy is open."
-                : "Your next chapter."}
+                ? t("Your academy is open.")
+                : t("Your next chapter.")}
             </h3>
-            <p>Each course is purchased separately with ongoing access.</p>
+            <p>
+              {t("Each course is purchased separately with ongoing access.")}
+            </p>
             <Button href="/purchases" secondary>
-              My purchased courses
+              {t("My purchased courses")}
             </Button>
           </div>
           <div className="panel stack">
-            <h3>Quiz results</h3>
+            <h3>{t("Quiz results")}</h3>
             {data?.attempts.length ? (
               data.attempts.slice(0, 5).map((a) => (
                 <div className="row between" key={a.id}>
                   <span>{a.score}%</span>
                   <Badge tone={a.passed ? "green" : "amber"}>
-                    {a.passed ? "Passed" : "Try again"}
+                    {a.passed ? t("Passed") : t("Try again")}
                   </Badge>
                 </div>
               ))
             ) : (
-              <p>No attempts yet. Open a course to find its final quiz.</p>
+              <p>
+                {t("No attempts yet. Open a course to find its final quiz.")}
+              </p>
             )}
           </div>
         </aside>
@@ -207,6 +216,8 @@ export function LessonPage({
   lessonId?: string;
   publicPreview?: boolean;
 }) {
+  const { t } = useLocale();
+
   const { account, loading: authLoading } = useAuth();
   const {
     data: catalog,
@@ -349,9 +360,11 @@ export function LessonPage({
     return <Message error>{error || catalogError}</Message>;
   if (!lesson)
     return (
-      <Empty title="Your first lesson is being prepared.">
-        <p>GEKI will publish the free Kihon video after content review.</p>
-        <Button href="/courses">Browse courses</Button>
+      <Empty title={t("Your first lesson is being prepared.")}>
+        <p>
+          {t("GEKI will publish the free Kihon video after content review.")}
+        </p>
+        <Button href="/courses">{t("Browse courses")}</Button>
       </Empty>
     );
   const lessons = currentCourse?.sections.flatMap((s) => s.lessons) || [];
@@ -367,7 +380,9 @@ export function LessonPage({
             >
               ← {currentCourse?.title || "Course"}
             </Link>
-            {lesson.preview ? <Badge tone="free">Free preview</Badge> : null}
+            {lesson.preview ? (
+              <Badge tone="free">{t("Free preview")}</Badge>
+            ) : null}
           </div>
           <div className={`video-box ${locked ? "lesson-paywall" : ""}`}>
             {locked ? (
@@ -379,17 +394,17 @@ export function LessonPage({
                 />
                 <section
                   className="lesson-lock-content"
-                  aria-label="Locked lesson"
+                  aria-label={t("Locked lesson")}
                 >
                   <span className="lesson-lock-symbol">
                     <Icon name="lock" />
                   </span>
-                  <Badge>COURSE PURCHASE REQUIRED</Badge>
-                  <h2>Unlock your next lesson.</h2>
+                  <Badge>{t("COURSE PURCHASE REQUIRED")}</Badge>
+                  <h2>{t("Unlock your next lesson.")}</h2>
                   <p>
-                    Pay the course fee for{" "}
-                    <strong>{currentCourse?.title || "this course"}</strong> to
-                    access this lesson and the full course.
+                    {t("Pay the course fee for")}{" "}
+                    <strong>{currentCourse?.title || "this course"}</strong>{" "}
+                    {t("to access this lesson and the full course.")}
                   </p>
                   {currentCourse?.priceMinor ? (
                     <strong className="lesson-lock-price">
@@ -398,7 +413,7 @@ export function LessonPage({
                         currency: currentCourse.currency,
                         maximumFractionDigits: 0,
                       }).format(currentCourse.priceMinor / 100)}{" "}
-                      <small>one-time payment</small>
+                      <small>{t("one-time payment")}</small>
                     </strong>
                   ) : null}
                   <div className="row wrap">
@@ -409,7 +424,7 @@ export function LessonPage({
                           : "/courses"
                       }
                     >
-                      Pay course fee <Icon name="arrow" />
+                      {t("Pay course fee")} <Icon name="arrow" />
                     </Button>
                     <Button
                       secondary
@@ -419,12 +434,13 @@ export function LessonPage({
                           : "/courses"
                       }
                     >
-                      View course
+                      {t("View course")}
                     </Button>
                   </div>
                   <small>
-                    Ongoing course access after payment confirmation. Free
-                    previews stay open.
+                    {t(
+                      "Ongoing course access after payment confirmation. Free previews stay open.",
+                    )}
                   </small>
                 </section>
               </>
@@ -485,7 +501,7 @@ export function LessonPage({
                   className="play-big"
                   onClick={() => void start()}
                   disabled={busy}
-                  aria-label="Start lesson"
+                  aria-label={t("Start lesson")}
                 >
                   <Icon name="play" />
                 </button>
@@ -503,45 +519,46 @@ export function LessonPage({
               <Message error>{failure}</Message>
               <div className="row wrap">
                 <Button onClick={() => void start()} disabled={busy}>
-                  Try playback again
+                  {t("Try playback again")}
                 </Button>
                 <Button href="/devices" secondary>
-                  Manage devices
+                  {t("Manage devices")}
                 </Button>
                 <Button href="/purchases" secondary>
-                  My Courses
+                  {t("My Courses")}
                 </Button>
               </div>
             </div>
           ) : null}
           <div className="lesson-detail">
             <div className="eyebrow">
-              KYOKUSHIN · {Math.round(lesson.duration / 60)} MIN
+              KYOKUSHIN · {Math.round(lesson.duration / 60)} {t("MIN")}
             </div>
             <h1>{lesson.title}</h1>
             <p>{lesson.description}</p>
             <div className="panel stack">
-              <h4>Bring this into your practice</h4>
+              <h4>{t("Bring this into your practice")}</h4>
               <p>
-                Observe carefully. Practice within your ability and follow your
-                dojo instructor’s guidance.
+                {t(
+                  "Observe carefully. Practice within your ability and follow your dojo instructor’s guidance.",
+                )}
               </p>
             </div>
             <div className="next-prev">
               {lessons[index - 1] ? (
                 <Button href={"/lessons/" + lessons[index - 1]!.id} secondary>
-                  Previous lesson
+                  {t("Previous lesson")}
                 </Button>
               ) : (
                 <span />
               )}
               {lessons[index + 1] ? (
                 <Button href={"/lessons/" + lessons[index + 1]!.id}>
-                  Next lesson <Icon name="arrow" />
+                  {t("Next lesson")} <Icon name="arrow" />
                 </Button>
               ) : currentCourse?.quiz?.published ? (
                 <Button href={"/quizzes/" + currentCourse.quiz.id}>
-                  Final quiz
+                  {t("Final quiz")}
                 </Button>
               ) : null}
             </div>
@@ -549,10 +566,10 @@ export function LessonPage({
         </div>
         <aside className="lesson-aside">
           <div className="aside-head">
-            <div className="eyebrow">YOUR COURSE</div>
+            <div className="eyebrow">{t("YOUR COURSE")}</div>
             <h3>{currentCourse?.title}</h3>
             <p style={{ fontSize: 12 }}>
-              All lessons open after purchasing this course.
+              {t("All lessons open after purchasing this course.")}
             </p>
           </div>
           {currentCourse?.sections.map((s) => (
@@ -570,11 +587,11 @@ export function LessonPage({
                   <div className="row-copy">
                     <span>{l.title}</span>
                     <small>
-                      {Math.round(l.video.duration / 60)} min{" "}
+                      {Math.round(l.video.duration / 60)} {t("min")}{" "}
                       {l.preview
-                        ? "· Free preview"
+                        ? t("· Free preview")
                         : !canAccessCourse
-                          ? "· Locked"
+                          ? t("· Locked")
                           : ""}
                     </small>
                   </div>
@@ -585,13 +602,17 @@ export function LessonPage({
         </aside>
       </div>
       {transfer ? (
-        <Modal title="Move playback here?" onClose={() => setTransfer(false)}>
+        <Modal
+          title={t("Move playback here?")}
+          onClose={() => setTransfer(false)}
+        >
           <p>
-            Your other active stream will end. Continue this lesson on the
-            current device.
+            {t(
+              "Your other active stream will end. Continue this lesson on the current device.",
+            )}
           </p>
           <Button onClick={() => void start(true)} disabled={busy}>
-            Transfer playback here
+            {t("Transfer playback here")}
           </Button>
         </Modal>
       ) : null}
@@ -599,6 +620,8 @@ export function LessonPage({
   );
 }
 export function QuizPage({ quizId }: { quizId: string }) {
+  const { t } = useLocale();
+
   const { account } = useAuth();
   const { data, error, loading } = useData<{
     id: string;
@@ -632,26 +655,28 @@ export function QuizPage({ quizId }: { quizId: string }) {
   if (error) return <Message error>{error}</Message>;
   if (!data)
     return (
-      <Message>Purchase this course and sign in to open its quiz.</Message>
+      <Message>
+        {t("Purchase this course and sign in to open its quiz.")}
+      </Message>
     );
   if (attempt)
     return (
       <div className="quiz-wrap">
         <Heading
-          eyebrow="ASSESSMENT COMPLETE"
+          eyebrow={t("ASSESSMENT COMPLETE")}
           title={
             attempt.passed
-              ? "Your understanding is taking shape."
-              : "Another look. A deeper understanding."
+              ? t("Your understanding is taking shape.")
+              : t("Another look. A deeper understanding.")
           }
         />
         <div className="panel quiz-results">
           <div className="score">{attempt.score}%</div>
           <Badge tone={attempt.passed ? "green" : "amber"}>
-            {attempt.passed ? "Passed" : "Try again"}
+            {attempt.passed ? t("Passed") : t("Try again")}
           </Badge>
           <p style={{ marginTop: 20 }}>
-            Passing score: 80% · Unlimited retries
+            {t("Passing score: 80% · Unlimited retries")}
           </p>
           <Button
             secondary
@@ -660,14 +685,16 @@ export function QuizPage({ quizId }: { quizId: string }) {
               setAnswers({});
             }}
           >
-            Retry quiz
+            {t("Retry quiz")}
           </Button>
         </div>
         <div className="stack" style={{ marginTop: 24 }}>
           {attempt.review.map((q, i) => (
             <div className="panel stack" key={i}>
               <h4>{q.prompt}</h4>
-              <p>Correct answer: {q.options[q.correctIndex]}</p>
+              <p>
+                {t("Correct answer:")} {q.options[q.correctIndex]}
+              </p>
               <p>{q.explanation}</p>
             </div>
           ))}
@@ -677,15 +704,15 @@ export function QuizPage({ quizId }: { quizId: string }) {
   return (
     <div className="quiz-wrap">
       <Heading
-        eyebrow="COURSE ASSESSMENT"
-        title="Understand. Then apply."
+        eyebrow={t("COURSE ASSESSMENT")}
+        title={t("Understand. Then apply.")}
         description={data.course.title}
       />
       <form className="stack" onSubmit={submit}>
         {data.questions.map((q, i) => (
           <section key={q.id} className="panel quiz-panel">
             <div className="eyebrow">
-              QUESTION {i + 1} OF {data.questions.length}
+              {t("QUESTION")} {i + 1} {t("OF")} {data.questions.length}
             </div>
             <h2>{q.prompt}</h2>
             <div className="answers">
@@ -716,15 +743,19 @@ export function QuizPage({ quizId }: { quizId: string }) {
             busy || Object.keys(answers).length !== data.questions.length
           }
         >
-          {busy ? "Grading…" : "Submit quiz"}
+          {busy ? t("Grading…") : t("Submit quiz")}
           <Icon name="quiz" />
         </Button>
-        <small>No timer. Take your time and review before submitting.</small>
+        <small>
+          {t("No timer. Take your time and review before submitting.")}
+        </small>
       </form>
     </div>
   );
 }
 export function AccountPage({ route }: { route: string }) {
+  const { t, language } = useLocale();
+
   const { account, refresh, logout } = useAuth();
   const { data, error, loading, reload } = useData<Dashboard>(
     account ? "/me/dashboard" : null,
@@ -760,9 +791,9 @@ export function AccountPage({ route }: { route: string }) {
     return (
       <>
         <Heading
-          eyebrow="NOTIFICATIONS"
-          title="The updates that matter."
-          description="Your account, purchases and learning access."
+          eyebrow={t("NOTIFICATIONS")}
+          title={t("The updates that matter.")}
+          description={t("Your account, purchases and learning access.")}
         />
         <div className="table-wrap">
           {data?.notifications.length ? (
@@ -775,11 +806,11 @@ export function AccountPage({ route }: { route: string }) {
                   <Icon name="bell" />
                 </span>
                 <div className="stack">
-                  <h3>{n.title}</h3>
-                  <p>{n.body}</p>
-                  <small>{when(n.createdAt)}</small>
+                  <h3>{t(n.title)}</h3>
+                  <p>{t(n.body)}</p>
+                  <small>{when(n.createdAt, language)}</small>
                   <Link className="text-link" href={n.href}>
-                    View details
+                    {t("View details")}
                   </Link>
                   {!n.readAt ? (
                     <button
@@ -790,14 +821,14 @@ export function AccountPage({ route }: { route: string }) {
                         }).then(reload)
                       }
                     >
-                      Mark read
+                      {t("Mark read")}
                     </button>
                   ) : null}
                 </div>
               </div>
             ))
           ) : (
-            <Empty title="You’re all caught up." />
+            <Empty title={t("You’re all caught up.")} />
           )}
         </div>
       </>
@@ -806,29 +837,35 @@ export function AccountPage({ route }: { route: string }) {
     return (
       <>
         <Heading
-          eyebrow="MY COURSES"
-          title="Your purchased course packages."
-          description="One-time purchases. Ongoing access to each course you own."
+          eyebrow={t("MY COURSES")}
+          title={t("Your purchased course packages.")}
+          description={t(
+            "One-time purchases. Ongoing access to each course you own.",
+          )}
         />
         <PendingPayments />
         <div className="grid-3">
           {data?.purchases.map((p) => (
             <div className="panel stack" key={p.id}>
               <Badge tone={p.revokedAt ? "red" : "green"}>
-                {p.revokedAt ? "Access revoked" : "Purchased"}
+                {p.revokedAt ? t("Access revoked") : t("Purchased")}
               </Badge>
               <h3>{p.course.title}</h3>
-              <p>Purchased {when(p.purchasedAt)}</p>
+              <p>
+                {t("Purchased")} {when(p.purchasedAt, language)}
+              </p>
               <small>{p.paymentReference}</small>
               {!p.revokedAt ? (
-                <Button href={"/courses/" + p.course.slug}>Open course</Button>
+                <Button href={"/courses/" + p.course.slug}>
+                  {t("Open course")}
+                </Button>
               ) : null}
             </div>
           ))}
         </div>
         {!data?.purchases.length ? (
-          <Empty title="No course purchases yet.">
-            <Button href="/courses">Explore courses</Button>
+          <Empty title={t("No course purchases yet.")}>
+            <Button href="/courses">{t("Explore courses")}</Button>
           </Empty>
         ) : null}
       </>
@@ -836,16 +873,16 @@ export function AccountPage({ route }: { route: string }) {
   return (
     <>
       <Heading
-        eyebrow="ACCOUNT SETTINGS"
-        title="Your space. Your preferences."
+        eyebrow={t("ACCOUNT SETTINGS")}
+        title={t("Your space. Your preferences.")}
       />
       {message ? <Message>{message}</Message> : null}
       {failure ? <Message error>{failure}</Message> : null}
       <div className="settings-grid">
         <form className="panel stack" onSubmit={save}>
-          <h3>Learner profile</h3>
+          <h3>{t("Learner profile")}</h3>
           <label>
-            Learner display name
+            {t("Learner display name")}
             <input
               name="displayName"
               defaultValue={account?.displayName}
@@ -854,60 +891,62 @@ export function AccountPage({ route }: { route: string }) {
             />
           </label>
           <label>
-            Account / guardian email
+            {t("Account / guardian email")}
             <input value={account?.email || ""} readOnly />
           </label>
           <label>
-            Language
+            {t("Language")}
             <select
               key={account?.language}
               name="language"
               defaultValue={account?.language}
             >
-              <option value="en">English</option>
+              <option value="en">{t("English")}</option>
               <option value="mm">မြန်မာ</option>
             </select>
           </label>
           <label>
-            Account type
+            {t("Account type")}
             <select name="accountType" defaultValue={account?.accountType}>
-              <option value="ADULT">Myself · Age 18+</option>
-              <option value="GUARDIAN">My child · Age 12–17</option>
+              <option value="ADULT">{t("Myself · Age 18+")}</option>
+              <option value="GUARDIAN">{t("My child · Age 12–17")}</option>
             </select>
           </label>
           <label className="consent">
             <input type="checkbox" name="consent" required />
             <span>
-              I am an adult or the parent/guardian responsible for this
-              learner’s account.
+              {t(
+                "I am an adult or the parent/guardian responsible for this learner’s account.",
+              )}
             </span>
           </label>
           <Button type="submit" disabled={busy}>
-            {busy ? "Saving…" : "Save changes"}
+            {busy ? t("Saving…") : t("Save changes")}
           </Button>
         </form>
         <div className="stack">
           <div className="panel stack">
-            <h3>Security</h3>
+            <h3>{t("Security")}</h3>
             <Button href="/forgot" secondary>
-              Reset password
+              {t("Reset password")}
             </Button>
             <Button href="/devices" secondary>
-              Registered devices
+              {t("Registered devices")}
             </Button>
           </div>
           <div className="panel stack">
-            <h3>Account notifications</h3>
+            <h3>{t("Account notifications")}</h3>
             <p>
-              Essential verification, recovery and purchase messages are
-              retained.
+              {t(
+                "Essential verification, recovery and purchase messages are retained.",
+              )}
             </p>
             <small>
-              Full Burmese interface copy is under editorial review.
+              {t("Full Burmese interface copy is under editorial review.")}
             </small>
           </div>
           <Button secondary onClick={() => void logout()}>
-            Sign out <Icon name="logout" />
+            {t("Sign out")} <Icon name="logout" />
           </Button>
         </div>
       </div>
@@ -915,6 +954,8 @@ export function AccountPage({ route }: { route: string }) {
   );
 }
 export function DevicesPage() {
+  const { t, language } = useLocale();
+
   const { account, deviceNotice, refresh } = useAuth();
   const { data, error, loading, reload } = useData<Devices>(
     account ? "/me/devices" : null,
@@ -953,9 +994,11 @@ export function DevicesPage() {
   return (
     <>
       <Heading
-        eyebrow="DEVICE MANAGEMENT"
-        title="Your practice, on your devices."
-        description="Two registered browsers/devices. One active video stream."
+        eyebrow={t("DEVICE MANAGEMENT")}
+        title={t("Your practice, on your devices.")}
+        description={t(
+          "Two registered browsers/devices. One active video stream.",
+        )}
       />
       {loading ? (
         <Loading />
@@ -965,7 +1008,7 @@ export function DevicesPage() {
         <div className="settings-grid">
           <div className="panel stack">
             <div className="row between">
-              <h3>Registered devices</h3>
+              <h3>{t("Registered devices")}</h3>
               <Badge>{data?.devices.length || 0} / 2</Badge>
             </div>
             {data?.devices.map((d) => (
@@ -973,15 +1016,18 @@ export function DevicesPage() {
                 <Icon name="devices" />
                 <div className="device-copy">
                   <h4>
-                    {d.label} {d.current ? <Badge>Current device</Badge> : null}
+                    {d.label}{" "}
+                    {d.current ? <Badge>{t("Current device")}</Badge> : null}
                   </h4>
-                  <p>Last active {when(d.lastSeenAt)}</p>
+                  <p>
+                    {t("Last active")} {when(d.lastSeenAt, language)}
+                  </p>
                 </div>
-                <button onClick={() => setRemove(d.id)}>Remove</button>
+                <button onClick={() => setRemove(d.id)}>{t("Remove")}</button>
               </div>
             ))}
             {!data?.devices.length ? (
-              <p>Devices are registered when you sign in.</p>
+              <p>{t("Devices are registered when you sign in.")}</p>
             ) : null}
             {!data?.devices.some((d) => d.current) ? (
               <div className="stack">
@@ -1006,24 +1052,26 @@ export function DevicesPage() {
                     }
                   }}
                 >
-                  Register this browser
+                  {t("Register this browser")}
                 </Button>
               </div>
             ) : null}
             <Message>
-              {data?.replacementsRemaining ?? 2} replacements available in the
-              rolling 30-day window.
+              {data?.replacementsRemaining ?? 2}{" "}
+              {t("replacements available in the rolling 30-day window.")}
             </Message>
           </div>
           <div className="panel stack">
-            <h3>One focused stream.</h3>
+            <h3>{t("One focused stream.")}</h3>
             <p>
-              Starting a lesson on another device offers an explicit playback
-              transfer.
+              {t(
+                "Starting a lesson on another device offers an explicit playback transfer.",
+              )}
             </p>
             <p>
-              Browser data resets may require registering again. An
-              administrator can help reset devices.
+              {t(
+                "Browser data resets may require registering again. An administrator can help reset devices.",
+              )}
             </p>
           </div>
         </div>
@@ -1031,15 +1079,16 @@ export function DevicesPage() {
       {failure ? <Message error>{failure}</Message> : null}
       {remove ? (
         <Modal
-          title="Remove registered device?"
+          title={t("Remove registered device?")}
           onClose={() => setRemove(null)}
         >
           <p>
-            This revokes the device’s access and uses one of your two
-            replacements per 30 days.
+            {t(
+              "This revokes the device’s access and uses one of your two replacements per 30 days.",
+            )}
           </p>
           <Button disabled={busy} onClick={() => void revoke()}>
-            Remove device
+            {t("Remove device")}
           </Button>
         </Modal>
       ) : null}

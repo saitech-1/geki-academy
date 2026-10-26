@@ -68,7 +68,7 @@ export function PublicNav() {
               ["/courses", "Courses"],
               [
                 account ? "/dashboard" : "/signin",
-                account ? "My Academy" : "Sign in",
+                account ? t("My Academy") : t("Sign in"),
               ],
             ].map(([h, label]) => (
               <Link
@@ -102,7 +102,9 @@ export function Footer() {
       <div className="footer-word">GEKI ACADEMY</div>
       <div className="footer-bottom">
         <span>© {new Date().getFullYear()} GEKI Academy.</span>
-        <span>Traditional spirit. Modern science. Limitless growth.</span>
+        <span>
+          {t("Traditional spirit. Modern science. Limitless growth.")}
+        </span>
       </div>
     </footer>
   );
@@ -127,6 +129,8 @@ export function AppShell({
   route: string;
   admin?: boolean;
 }) {
+  const { t } = useLocale();
+
   const { identity, account, loading, error, deviceNotice, logout, refresh } =
     useAuth();
   const { t: translate } = useLocale();
@@ -143,10 +147,10 @@ export function AppShell({
     return (
       <PublicLayout>
         <div className="state-card panel">
-          <h1>Your academy awaits.</h1>
-          <p>Sign in to continue your learning.</p>
+          <h1>{t("Your academy awaits.")}</h1>
+          <p>{t("Sign in to continue your learning.")}</p>
           <Button href={"/signin?next=" + encodeURIComponent(route)}>
-            Sign in <Icon name="arrow" />
+            {t("Sign in")} <Icon name="arrow" />
           </Button>
         </div>
       </PublicLayout>
@@ -155,7 +159,7 @@ export function AppShell({
     return (
       <PublicLayout>
         <Message error>{error}</Message>
-        <Button onClick={() => void refresh()}>Try again</Button>
+        <Button onClick={() => void refresh()}>{t("Try again")}</Button>
         <Button
           secondary
           onClick={() => void logout().then(() => router.push("/signin"))}
@@ -173,7 +177,7 @@ export function AppShell({
   if (admin && account.role === "STUDENT")
     return (
       <PublicLayout>
-        <Message error>Administrator access is required.</Message>
+        <Message error>{t("Administrator access is required.")}</Message>
       </PublicLayout>
     );
   return (
@@ -182,7 +186,7 @@ export function AppShell({
         <Logo />
         <div>
           <div className="sidebar-label">
-            {admin ? "WORKSPACE" : "YOUR ACADEMY"}
+            {admin ? "WORKSPACE" : t("YOUR ACADEMY")}
           </div>
           <nav className="sidebar-nav">
             {nav.map(([h, i, t]) => (
@@ -194,7 +198,7 @@ export function AppShell({
             {!admin && account.role !== "STUDENT" ? (
               <Link href="/admin">
                 <Icon name="shield" />
-                <span>Administration</span>
+                <span>{t("Administration")}</span>
               </Link>
             ) : null}
           </nav>
@@ -206,14 +210,14 @@ export function AppShell({
             />
             <p>
               {account.purchases.some((p) => !p.revokedAt)
-                ? "Your next lesson is waiting."
-                : "Your progress is kept safe."}
+                ? t("Your next lesson is waiting.")
+                : t("Your progress is kept safe.")}
             </p>
             <Link
               className="text-link"
               href={admin ? "/dashboard" : "/purchases"}
             >
-              {admin ? "Student view" : "My Courses"}
+              {admin ? "Student view" : t("My Courses")}
               <Icon name="arrow" />
             </Link>
           </div>
@@ -236,9 +240,9 @@ export function AppShell({
             <Logo />
           </span>
           <div className="breadcrumbs">
-            {admin ? "Administration" : "My Academy"} /{" "}
+            {admin ? t("Administration") : t("My Academy")} /{" "}
             <span className="light">
-              {nav.find(([h]) => route === h)?.[2] || "Learning"}
+              {nav.find(([h]) => route === h)?.[2] || t("Learning")}
             </span>
           </div>
           <div className="row">
@@ -246,7 +250,7 @@ export function AppShell({
             <Link
               className="icon-btn"
               href="/notifications"
-              aria-label="Notifications"
+              aria-label={t("Notifications")}
             >
               <Icon name="bell" />
             </Link>
@@ -265,16 +269,17 @@ export function AppShell({
         >
           {!account.emailVerified ? (
             <div className="utility-bar">
-              <span>Verify your email to access paid learning.</span>
+              <span>{t("Verify your email to access paid learning.")}</span>
               <Link className="text-link" href="/verify">
-                Verify email
+                {t("Verify email")}
               </Link>
             </div>
           ) : null}
           <div key={route} className="page-enter">
             {deviceNotice && route !== "/devices" ? (
               <div className="notice">
-                {deviceNotice} <Link href="/devices">Manage devices</Link>
+                {deviceNotice}{" "}
+                <Link href="/devices">{t("Manage devices")}</Link>
               </div>
             ) : null}
             {children}
@@ -297,7 +302,7 @@ export function AppShell({
         ))}
       </nav>
       {menu ? (
-        <Modal title="My Academy" onClose={() => setMenu(false)}>
+        <Modal title={t("My Academy")} onClose={() => setMenu(false)}>
           <div className="stack">
             {nav.map(([h, i, t]) => (
               <Link

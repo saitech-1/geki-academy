@@ -10,7 +10,7 @@ Release note: the hosted Kihon record was observed with a 35,000 MMK base price.
 
 ## Receipt-only learner flow
 
-Open checkout → reserve exact price → scan/save KBZPay QR → pay → upload PNG/JPEG photo (5 MB maximum) → manual review → course unlocked. The learner types no transaction ID. Approval still requires the administrator to verify actual incoming funds, record the incoming KBZPay reference, and provide a review reason. References are unique across purchases; image hashes and submission history prevent receipt reuse. Photos alone never grant access.
+Open checkout while signed in → exact-price order and QR appear automatically → scan/save KBZPay QR → pay → upload PNG/JPEG screenshot (5 MB maximum) → manual review → course unlocked. The learner types no transaction ID. Approval still requires the administrator to verify actual incoming funds, record the incoming KBZPay reference, and provide a review reason. References are unique across purchases; image hashes and submission history prevent receipt reuse. Photos alone never grant access.
 
 ## Private cloud storage setup
 
@@ -45,3 +45,9 @@ node scripts/devices-browser.cjs
 ```
 
 The payment fixture provides separate accounts for checkout and device browser tests. Re-run the API fixture generator before repeating the browser suites. These tests use synthetic receipts and isolated local test users; never run them against live payment records.
+
+## Interface languages
+
+English and Burmese interface copy now covers the public homepage/catalog, authentication and recovery, student dashboard, lesson/quiz controls, course checkout, payment review, account settings, device management and common feedback components. Authentication pages include a language selector. Burmese typography uses the Myanmar font fallback and increased heading/label line spacing; the GEKI wordmark and payment amounts retain their original presentation. Course titles, descriptions, assessment content, and admin-written announcements use their provided translations and are not machine-translated by the UI. Further Burmese editorial review is still appropriate before launch.
+
+Run `npm run test:localization` after regenerating local payment fixtures with `npm run test:payments`. This uses emulator accounts to verify Burmese language persistence and the QR/screenshot payment flow without moving real money. There is no KBZPay API/gateway integration: the signed direct upload transports only the private screenshot to Storage.

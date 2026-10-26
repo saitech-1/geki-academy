@@ -1,6 +1,8 @@
+import { myanmarInterface } from "./myanmar-interface";
 import type { Language } from "@geki/contracts";
 // Burmese copy should receive native-speaker editorial review before launch.
 const myanmar: Record<string, string> = {
+  ...myanmarInterface,
   "My Courses": "ကျွန်ုပ်၏ သင်တန်းများ",
   "Course Packages": "သင်တန်းများ",
   "Buy this course": "ဤသင်တန်းကို ဝယ်ယူရန်",

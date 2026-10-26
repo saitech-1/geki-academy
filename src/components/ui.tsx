@@ -1,4 +1,5 @@
 "use client";
+import { useLocale } from "./locale";
 import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState, useId, type ReactNode } from "react";
@@ -90,14 +91,15 @@ export function Button({
   disabled?: boolean;
   type?: "button" | "submit";
 }) {
+  const { t } = useLocale();
   const cls = `btn ${secondary ? "secondary" : ""}`;
   return href ? (
     <Link className={cls} href={href}>
-      {children}
+      {typeof children === "string" ? t(children) : children}
     </Link>
   ) : (
     <button type={type} className={cls} onClick={onClick} disabled={disabled}>
-      {children}
+      {typeof children === "string" ? t(children) : children}
     </button>
   );
 }
@@ -108,7 +110,12 @@ export function Badge({
   children: ReactNode;
   tone?: string;
 }) {
-  return <span className={`badge ${tone}`}>{children}</span>;
+  const { t } = useLocale();
+  return (
+    <span className={`badge ${tone}`}>
+      {typeof children === "string" ? t(children) : children}
+    </span>
+  );
 }
 export function Heading({
   eyebrow,
@@ -121,23 +128,26 @@ export function Heading({
   description?: string;
   action?: ReactNode;
 }) {
+  const { t } = useLocale();
   return (
     <header className="page-head">
       <div className="stack">
-        <div className="eyebrow">{eyebrow}</div>
-        <h1>{title}</h1>
-        {description ? <p>{description}</p> : null}
+        <div className="eyebrow">{t(eyebrow)}</div>
+        <h1>{t(title)}</h1>
+        {description ? <p>{t(description)}</p> : null}
       </div>
       {action}
     </header>
   );
 }
 export function Loading() {
+  const { t } = useLocale();
+
   return (
     <div className="panel stack" role="status">
       <div className="skeleton large" aria-hidden />
       <div className="skeleton" style={{ width: "65%" }} aria-hidden />
-      <span className="sr-only">Loading…</span>
+      <span className="sr-only">{t("Loading…")}</span>
     </div>
   );
 }
@@ -148,13 +158,17 @@ export function Message({
   children: ReactNode;
   error?: boolean;
 }) {
-  if (error) return <Toast>{children}</Toast>;
+  const { t } = useLocale();
+  if (error)
+    return (
+      <Toast>{typeof children === "string" ? t(children) : children}</Toast>
+    );
   return (
     <div
       className={error ? "form-message" : "notice"}
       role={error ? "alert" : "status"}
     >
-      {children}
+      {typeof children === "string" ? t(children) : children}
     </div>
   );
 }
@@ -165,6 +179,7 @@ export function Toast({
   children: ReactNode;
   success?: boolean;
 }) {
+  const { t } = useLocale();
   const ref = useRef<HTMLDivElement>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   function clear() {
@@ -201,13 +216,13 @@ export function Toast({
         role={success ? "status" : "alert"}
         aria-atomic="true"
       >
-        <strong>{success ? "Done" : "Action needed"}</strong>
-        <p>{children}</p>
+        <strong>{success ? t("Done") : t("Action needed")}</strong>
+        <p>{typeof children === "string" ? t(children) : children}</p>
       </div>
       <button
         type="button"
         className="toast-dismiss"
-        aria-label="Dismiss notification"
+        aria-label={t("Dismiss notification")}
         onClick={dismiss}
       >
         <X size={17} aria-hidden="true" />
@@ -222,10 +237,11 @@ export function Empty({
   title: string;
   children?: ReactNode;
 }) {
+  const { t } = useLocale();
   return (
     <div className="empty">
       <Icon name="book" />
-      <h3>{title}</h3>
+      <h3>{t(title)}</h3>
       {children}
     </div>
   );
@@ -237,17 +253,18 @@ export function ProgressBar({
   value: number;
   label?: string;
 }) {
+  const { t } = useLocale();
   const percent = Math.min(100, Math.max(0, Math.round(value)));
   return (
     <div>
       <div className="progress-label">
-        <span>{label}</span>
+        <span>{t(label)}</span>
         <span>{percent}%</span>
       </div>
       <div
         className="progress"
         role="progressbar"
-        aria-label={label}
+        aria-label={t(label)}
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
@@ -268,6 +285,8 @@ export function Modal({
   onClose: () => void;
   dismissible?: boolean;
 }) {
+  const { t } = useLocale();
+
   const ref = useRef<HTMLDialogElement>(null);
   const titleId = useId();
   const [closing, setClosing] = useState(false);
@@ -311,13 +330,13 @@ export function Modal({
       aria-labelledby={titleId}
     >
       <header className="dialog-header">
-        <h2 id={titleId}>{title}</h2>
+        <h2 id={titleId}>{t(title)}</h2>
         <button
           type="button"
           className="icon-btn"
           disabled={!dismissible}
           onClick={close}
-          aria-label="Close"
+          aria-label={t("Close")}
         >
           <Icon name="close" />
         </button>

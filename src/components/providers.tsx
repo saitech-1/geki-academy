@@ -12,7 +12,7 @@ import { onIdTokenChanged, signOut, type User } from "firebase/auth";
 import type { CurrentUser } from "@geki/contracts";
 import { firebaseAuth } from "@/lib/firebase";
 import { api, registerCurrentDevice } from "@/lib/api";
-import { LocaleProvider } from "./locale";
+import { LocaleProvider, SkipLink } from "./locale";
 type Context = {
   identity: User | null;
   account: CurrentUser | null;
@@ -113,6 +113,7 @@ export function Providers({ children }: { children: ReactNode }) {
       }}
     >
       <LocaleProvider account={account} refresh={refresh}>
+        <SkipLink />
         {children}
       </LocaleProvider>
     </AuthContext.Provider>

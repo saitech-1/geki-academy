@@ -13,8 +13,16 @@ export const metadata: Metadata = {
   category: "Education",
   icons: {
     icon: [
-      { url: "/brand/geki-symbol-dark.svg", type: "image/svg+xml", media: "(prefers-color-scheme: light)" },
-      { url: "/brand/geki-symbol-light.svg", type: "image/svg+xml", media: "(prefers-color-scheme: dark)" },
+      {
+        url: "/brand/geki-symbol-dark.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: light)",
+      },
+      {
+        url: "/brand/geki-symbol-light.svg",
+        type: "image/svg+xml",
+        media: "(prefers-color-scheme: dark)",
+      },
     ],
     shortcut: "/brand/geki-symbol-light.svg",
   },
@@ -22,13 +30,20 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "GEKI Academy",
     title: "GEKI Academy — Master the Art. Build the Spirit.",
-    description: "Authentic Kyokushin Karate education through detailed video lessons and structured courses. Traditional spirit. Modern science. Limitless growth.",
-    images: [{ url: "/images/hero.jpg", alt: "GEKI Academy — Kyokushin Karate education" }],
+    description:
+      "Authentic Kyokushin Karate education through detailed video lessons and structured courses. Traditional spirit. Modern science. Limitless growth.",
+    images: [
+      {
+        url: "/images/hero.jpg",
+        alt: "GEKI Academy — Kyokushin Karate education",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: "GEKI Academy — Master the Art. Build the Spirit.",
-    description: "Learn authentic Kyokushin Karate through detailed video lessons and structured courses.",
+    description:
+      "Learn authentic Kyokushin Karate through detailed video lessons and structured courses.",
     images: ["/images/hero.jpg"],
   },
 };
@@ -52,9 +67,6 @@ export default function RootLayout({
         />
       </head>
       <body>
-        <a className="skip" href="#main">
-          Skip to content
-        </a>
         <Providers>{children}</Providers>
       </body>
     </html>

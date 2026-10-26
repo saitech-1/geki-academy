@@ -23,13 +23,13 @@ export function CourseCard({ course }: { course: Course }) {
         <img src={course.thumbnail} alt="Course artwork" />
         <Badge>{course.category}</Badge>
         <span className="duration">
-          {lessons.length} lessons ·{" "}
+          {lessons.length} {t("lessons ·")}{" "}
           {Math.round(lessons.reduce((n, l) => n + l.video.duration, 0) / 60)}{" "}
-          min
+          {t("min")}
         </span>
       </div>
       <div className="card-body">
-        <div className="eyebrow">KYOKUSHIN · FOUNDATIONS</div>
+        <div className="eyebrow">{t("KYOKUSHIN · FOUNDATIONS")}</div>
         <h3>{title}</h3>
         <p>
           {language === "mm" && course.descriptionMm
@@ -39,13 +39,13 @@ export function CourseCard({ course }: { course: Course }) {
         <div className="card-foot">
           <span>
             {owned
-              ? "Purchased / Start learning"
+              ? t("Purchased / Start learning")
               : course.priceMinor
                 ? new Intl.NumberFormat("en", {
                     style: "currency",
                     currency: course.currency,
                   }).format(course.priceMinor / 100)
-                : "Price to be announced"}
+                : t("Price to be announced")}
           </span>
           <Icon name="up" />
         </div>
@@ -70,15 +70,16 @@ export function Home() {
         </div>
         <div className="hero-content shell full">
           <div className="eyebrow light reveal">
-            THE KYOKUSHIN LEARNING EXPERIENCE
+            {t("THE KYOKUSHIN LEARNING EXPERIENCE")}
           </div>
           <h1 className="reveal delay">
-            <span>MASTER THE ART.</span>
-            <span className="outline">BUILD THE SPIRIT.</span>
+            <span>{t("MASTER THE ART.")}</span>
+            <span className="outline">{t("BUILD THE SPIRIT.")}</span>
           </h1>
           <p className="reveal delay">
-            Authentic Kyokushin Karate education, guided by experience and
-            powered by modern learning.
+            {t(
+              "Authentic Kyokushin Karate education, guided by experience and powered by modern learning.",
+            )}
           </p>
           <div className="row wrap reveal delay">
             <Button href="/courses">
@@ -90,45 +91,46 @@ export function Home() {
           </div>
         </div>
         <div className="hero-bottom shell full">
-          <span>01 / THE JOURNEY BEGINS</span>
-          <span>ENGLISH INSTRUCTION · EN / MM SUBTITLES</span>
-          <a href="#about">SCROLL TO DISCOVER ↓</a>
+          <span>{t("01 / THE JOURNEY BEGINS")}</span>
+          <span>{t("ENGLISH INSTRUCTION · EN / MM SUBTITLES")}</span>
+          <a href="#about">{t("SCROLL TO DISCOVER ↓")}</a>
         </div>
       </section>
       <RevealSection className="section shell" id="about">
         <div className="intro">
-          <div className="eyebrow">DISCOVER GEKI</div>
+          <div className="eyebrow">{t("DISCOVER GEKI")}</div>
           <div className="stack">
             <h2>
-              More than knowing the movement.
+              {t("More than knowing the movement.")}
               <br />
-              <span>Understanding what makes it matter.</span>
+              <span>{t("Understanding what makes it matter.")}</span>
             </h2>
             <p>
-              Detailed visual explanations. A structured learning path.
-              Knowledge you can bring back to your dojo.
+              {t(
+                "Detailed visual explanations. A structured learning path. Knowledge you can bring back to your dojo.",
+              )}
             </p>
           </div>
         </div>
         <div className="pills-band">
-          <span>Spirit.</span>
-          <span>Science.</span>
+          <span>{t("Spirit.")}</span>
+          <span>{t("Science.")}</span>
           <span>↗</span>
-          <span>Growth.</span>
+          <span>{t("Growth.")}</span>
         </div>
       </RevealSection>
       <RevealSection className="section shell">
         <div className="section-head">
           <div className="stack">
-            <div className="eyebrow">YOUR FOUNDATION STARTS HERE</div>
+            <div className="eyebrow">{t("YOUR FOUNDATION STARTS HERE")}</div>
             <h2>
-              One practice.
+              {t("One practice.")}
               <br />
-              Many layers of understanding.
+              {t("Many layers of understanding.")}
             </h2>
           </div>
           <Link className="text-link" href="/courses">
-            Explore your training <Icon name="up" />
+            {t("Explore your training")} <Icon name="up" />
           </Link>
         </div>
         {error ? (
@@ -140,8 +142,8 @@ export function Home() {
             ))}
           </div>
         ) : (
-          <Empty title="The academy is preparing its first courses.">
-            <p>Check back soon for published lessons.</p>
+          <Empty title={t("The academy is preparing its first courses.")}>
+            <p>{t("Check back soon for published lessons.")}</p>
           </Empty>
         )}
       </RevealSection>
@@ -154,42 +156,43 @@ export function Home() {
             </span>
           </div>
           <div className="feature-content">
-            <div className="eyebrow">THE SIGNATURE LEARNING JOURNEY</div>
+            <div className="eyebrow">{t("THE SIGNATURE LEARNING JOURNEY")}</div>
             <h2>
               Geki Kihon
               <br />
-              Package.
+              {t("Package.")}
             </h2>
             <p>
-              A structured path from Kihon to movement, basic Kumite and Kata.
-              Learn the why behind the technique.
+              {t(
+                "A structured path from Kihon to movement, basic Kumite and Kata. Learn the why behind the technique.",
+              )}
             </p>
             <div className="feature-steps">
               {["Kihon fundamentals", "Kihon Ido", "Basic Kumite", "Kata"].map(
-                (t, i) => (
-                  <span key={t}>
+                (step, i) => (
+                  <span key={step}>
                     <b>0{i + 1}</b>
-                    {t}
+                    {t(step)}
                   </span>
                 ),
               )}
             </div>
             <Button href="/courses">
-              Explore the academy <Icon name="arrow" />
+              {t("Explore the academy")} <Icon name="arrow" />
             </Button>
           </div>
         </div>
       </RevealSection>
       <section className="closing">
         <div className="shell">
-          <div className="eyebrow">YOUR NEXT CHAPTER</div>
+          <div className="eyebrow">{t("YOUR NEXT CHAPTER")}</div>
           <h2>
-            Step onto the mat.
+            {t("Step onto the mat.")}
             <br />
-            With a clearer mind.
+            {t("With a clearer mind.")}
           </h2>
           <Button href="/courses">
-            Explore courses <Icon name="up" />
+            {t("Explore courses")} <Icon name="up" />
           </Button>
         </div>
       </section>
@@ -198,6 +201,8 @@ export function Home() {
   );
 }
 export function Library() {
+  const { t } = useLocale();
+
   const { data, error, loading } = useData<Course[]>("/catalog");
   const [query, setQuery] = useState("");
   const [category, setCategory] = useState("All");
@@ -212,16 +217,16 @@ export function Library() {
   return (
     <PublicLayout>
       <Heading
-        eyebrow="THE GEKI LIBRARY"
-        title="Explore your training."
-        description="A deeper understanding starts with a closer look."
+        eyebrow={t("THE GEKI LIBRARY")}
+        title={t("Explore your training.")}
+        description={t("A deeper understanding starts with a closer look.")}
       />
       <div className="filters">
         <div className="search">
           <Icon name="search" />
           <input
-            placeholder="Search your training"
-            aria-label="Search courses"
+            placeholder={t("Search your training")}
+            aria-label={t("Search courses")}
             value={query}
             onChange={(e) => setQuery(e.target.value)}
           />
@@ -233,7 +238,7 @@ export function Library() {
               className={`chip ${category === c ? "active" : ""}`}
               onClick={() => setCategory(c)}
             >
-              {c}
+              {t(c)}
             </button>
           ))}
         </div>
@@ -249,11 +254,13 @@ export function Library() {
           ))}
         </div>
       ) : (
-        <Empty title="No courses to show yet.">
+        <Empty title={t("No courses to show yet.")}>
           <p>
             {data?.length
-              ? "Try another search or category."
-              : "Courses appear after the GEKI team reviews and publishes them."}
+              ? t("Try another search or category.")
+              : t(
+                  "Courses appear after the GEKI team reviews and publishes them.",
+                )}
           </p>
         </Empty>
       )}
@@ -287,12 +294,12 @@ export function CourseDetail({ slug }: { slug: string }) {
   return (
     <PublicLayout>
       <div className="eyebrow">
-        <Link href="/courses">COURSE LIBRARY</Link> / {course.category}
+        <Link href="/courses">{t("COURSE LIBRARY")}</Link> / {course.category}
       </div>
       <section className="course-hero">
         <img src={course.thumbnail} alt="Course artwork" />
         <div className="stack">
-          <div className="eyebrow">KYOKUSHIN · FOUNDATIONS</div>
+          <div className="eyebrow">{t("KYOKUSHIN · FOUNDATIONS")}</div>
           <h1>
             {language === "mm" && course.titleMm
               ? course.titleMm
@@ -306,7 +313,7 @@ export function CourseDetail({ slug }: { slug: string }) {
           <div className="metadata">
             <span>{course.instructor}</span>
             <span>
-              {course.sections.flatMap((s) => s.lessons).length} lessons
+              {course.sections.flatMap((s) => s.lessons).length} {t("lessons")}
             </span>
           </div>
           {first ? (
@@ -315,7 +322,7 @@ export function CourseDetail({ slug }: { slug: string }) {
                 ownsCourse ? "/lessons/" + first.id : "/checkout/" + course.slug
               }
             >
-              {t(ownsCourse ? "Start course" : "Pay course fee")}
+              {t(ownsCourse ? t("Start course") : t("Pay course fee"))}
               <Icon name="arrow" />
             </Button>
           ) : null}
@@ -326,7 +333,7 @@ export function CourseDetail({ slug }: { slug: string }) {
                   style: "currency",
                   currency: course.currency,
                 }).format(course.priceMinor / 100)
-              : "Price to be announced"}
+              : t("Price to be announced")}
           </p>
         </div>
       </section>
@@ -351,12 +358,14 @@ export function CourseDetail({ slug }: { slug: string }) {
                   <Icon name={l.preview || ownsCourse ? "play" : "lock"} />
                   <div className="row-copy">
                     <span>{l.title}</span>
-                    <small>{Math.round(l.video.duration / 60)} min</small>
+                    <small>
+                      {Math.round(l.video.duration / 60)} {t("min")}
+                    </small>
                   </div>
                   {l.preview ? (
-                    <Badge tone="free">Free preview</Badge>
+                    <Badge tone="free">{t("Free preview")}</Badge>
                   ) : !ownsCourse ? (
-                    <Badge>Locked / Pay course fee</Badge>
+                    <Badge>{t("Locked / Pay course fee")}</Badge>
                   ) : null}
                 </Link>
               ))}
@@ -370,23 +379,28 @@ export function CourseDetail({ slug }: { slug: string }) {
                   : "/checkout/" + course.slug
               }
             >
-              Final course quiz <Icon name="quiz" />
+              {t("Final course quiz")} <Icon name="quiz" />
             </Button>
           ) : null}
         </div>
         <aside className="panel stack">
           <h3>
-            A clear path.
+            {t("A clear path.")}
             <br />
-            Your own pace.
+            {t("Your own pace.")}
           </h3>
-          <p>Revisit any available lesson. Your progress saves as you watch.</p>
           <p>
-            English instruction, with reviewed English and Burmese subtitle
-            tracks.
+            {t(
+              "Revisit any available lesson. Your progress saves as you watch.",
+            )}
+          </p>
+          <p>
+            {t(
+              "English instruction, with reviewed English and Burmese subtitle tracks.",
+            )}
           </p>
           <Button href="/devices" secondary>
-            Device management
+            {t("Device management")}
           </Button>
         </aside>
       </div>
