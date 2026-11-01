@@ -21,8 +21,8 @@ export const CourseInput = z.object({
     .string()
     .max(2000)
     .regex(
-      /^(https?:\/\/|\/images\/)/,
-      "Use an HTTPS image URL or an /images/ asset path.",
+      /^(https?:\/\/|\/images\/|\/api\/course-thumbnails\/[a-f0-9-]{36}\.webp$)/,
+      "Use an image URL, uploaded thumbnail or an /images/ asset path.",
     )
     .default("/images/hero.jpg"),
   category: z

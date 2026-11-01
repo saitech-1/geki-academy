@@ -32,6 +32,7 @@ import {
 import { qrCheckout, learnerPayments, adminPayments } from "./qr-payments";
 import { academyCourses } from "./course-library";
 import { pushEndpoints } from "./push";
+import { thumbnailUploads, thumbnailPublic } from "./course-thumbnails";
 const app = createEndpoints();
 app.use(
   "/api",
@@ -255,6 +256,7 @@ const accountLimit = rateLimit({
   standardHeaders: "draft-8",
   legacyHeaders: false,
 });
+app.use("/api/course-thumbnails", thumbnailPublic);
 app.use("/api/me", auth, accountLimit);
 app.get("/api/me", async (req, res) => {
   const purchases = await db.coursePurchase.findMany({
@@ -773,6 +775,7 @@ app.post("/api/me/quizzes/:id/attempts", async (req, res) => {
 });
 app.use("/api/admin-media", adminSourceMedia);
 app.use("/api/admin", auth, admin, accountLimit, adminContent);
+app.use("/api/admin", thumbnailUploads);
 app.get("/api/admin/overview", async (_req, res) => {
   const [students, activePurchasers, videos, courses, queue] =
     await Promise.all([

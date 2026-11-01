@@ -7,6 +7,7 @@ import type { Course, Video, Student, Question } from "@/lib/types";
 import { api, json, uploadVideo, videoDuration } from "@/lib/api";
 import { useAuth, useData } from "./providers";
 import { ProtectedUpload } from "./protected-upload";
+import { ThumbnailUpload } from "./thumbnail-upload";
 import {
   Heading,
   Button,
@@ -254,6 +255,7 @@ export function CourseEditor({ courseId }: { courseId: string }) {
   const [message, setMessage] = useState("");
   const [failure, setFailure] = useState("");
   const [addTo, setAddTo] = useState<string | null>(null);
+  const [thumbnailBusy, setThumbnailBusy] = useState(false);
   const [publish, setPublish] = useState(false);
   const [editingSection, setEditingSection] = useState<{
     id: string;
@@ -402,16 +404,12 @@ export function CourseEditor({ courseId }: { courseId: string }) {
                 ))}
               </select>
             </label>
-            <label>
-              Course thumbnail URL
-              <input
-                name="thumbnail"
-                defaultValue={c.thumbnail}
-                required
-                placeholder="https://…"
-              />
-            </label>
-            <Button type="submit" secondary>
+            <ThumbnailUpload
+              courseId={c.id}
+              initialUrl={c.thumbnail}
+              onBusyChange={setThumbnailBusy}
+            />
+            <Button type="submit" secondary disabled={thumbnailBusy}>
               Save course
             </Button>
           </form>

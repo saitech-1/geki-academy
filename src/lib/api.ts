@@ -96,7 +96,11 @@ export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);
   const user = firebaseAuth().currentUser;
   if (user) headers.set("Authorization", `Bearer ${await user.getIdToken()}`);
-  if (!(init.body instanceof FormData) && init.body)
+  if (
+    !(init.body instanceof FormData) &&
+    !(init.body instanceof Blob) &&
+    init.body
+  )
     headers.set("Content-Type", "application/json");
   if (typeof window !== "undefined") headers.set("X-Device-Key", deviceKey());
   const r = await fetch("/api" + path, { ...init, headers, cache: "no-store" });

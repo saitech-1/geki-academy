@@ -2,6 +2,18 @@ import { myanmarInterface } from "./myanmar-interface";
 import type { Language } from "@geki/contracts";
 // Burmese copy should receive native-speaker editorial review before launch.
 const myanmar: Record<string, string> = {
+  "Course thumbnail": "သင်တန်းမျက်နှာဖုံးပုံ",
+  "Course thumbnail preview": "သင်တန်းမျက်နှာဖုံးပုံ အကြိုကြည့်ရှုမှု",
+  "Upload from device": "စက်ထဲမှ ပုံတင်ရန်",
+  "Upload course thumbnail": "သင်တန်းမျက်နှာဖုံးပုံ တင်ရန်",
+  "Uploading thumbnail…": "မျက်နှာဖုံးပုံ တင်နေသည်…",
+  "JPG, PNG or WebP. Maximum 2 MB. Recommended ratio: 16:9.": "JPG၊ PNG သို့မဟုတ် WebP။ အများဆုံး 2 MB။ အကြံပြုအချိုး 16:9။",
+  "Image uploaded. Save the course to apply it.": "ပုံတင်ပြီးပါပြီ။ အသုံးပြုရန် သင်တန်းကို သိမ်းဆည်းပါ။",
+  "Or use an image URL": "သို့မဟုတ် ပုံလင့်ခ်ကို အသုံးပြုရန်",
+  "Course thumbnail URL": "သင်တန်းမျက်နှာဖုံးပုံ လင့်ခ်",
+  "Choose a JPG, PNG or WebP image smaller than 2 MB.": "2 MB ထက်ငယ်သော JPG၊ PNG သို့မဟုတ် WebP ပုံကို ရွေးပါ။",
+  "Choose a valid, non-animated JPG, PNG or WebP image.": "လှုပ်ရှားပုံမဟုတ်သော မှန်ကန်သည့် JPG၊ PNG သို့မဟုတ် WebP ပုံကို ရွေးပါ။",
+  "Could not upload the thumbnail. Please try again.": "မျက်နှာဖုံးပုံ တင်၍မရပါ။ ထပ်မံကြိုးစားပါ။",
   "Your two device slots are full.": "စက်ပစ္စည်း ၂ ခု စာရင်းသွင်းထားပြီးဖြစ်ပါသည်။",
   "You already have two devices registered. Please remove one in My Devices before continuing.": "စက်ပစ္စည်း ၂ ခု စာရင်းသွင်းထားပြီးဖြစ်ပါသည်။ ဆက်လက်အသုံးပြုရန် My Devices တွင် စက်ပစ္စည်းတစ်ခုကို ဦးစွာ ဖယ်ရှားပေးပါ။",
   "Background notifications": "နောက်ခံအကြောင်းကြားချက်များ",
