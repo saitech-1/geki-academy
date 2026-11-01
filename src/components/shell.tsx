@@ -4,12 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "./providers";
 import { useLocale, LanguageSelector } from "./locale";
+import { NotificationBell } from "./notifications";
 import { Logo, Icon, Button, Loading, Message, Modal, type icons } from "./ui";
 const studentNav = [
   ["/dashboard", "home", "Overview"],
-  ["/my-learning", "book", "My Learning"],
-  ["/courses", "grid", "Course Library"],
-  ["/purchases", "card", "My Courses"],
+  ["/my-learning", "book", "My Course Library"],
+  ["/academy/courses", "grid", "Course Catalog"],
+  ["/purchases", "card", "Purchases & Payments"],
   ["/devices", "devices", "My Devices"],
   ["/notifications", "bell", "Notifications"],
   ["/settings", "settings", "Settings"],
@@ -120,6 +121,23 @@ export function PublicLayout({ children }: { children: ReactNode }) {
     </>
   );
 }
+export function DeviceLimitNotice({ returnTo }: { returnTo: string }) {
+  const { t } = useLocale();
+  return (
+    <section className="state-card panel" aria-labelledby="device-limit-title">
+      <Icon name="devices" />
+      <h1 id="device-limit-title">{t("Your two device slots are full.")}</h1>
+      <p>
+        {t(
+          "You already have two devices registered. Please remove one in My Devices before continuing.",
+        )}
+      </p>
+      <Button href={"/devices?next=" + encodeURIComponent(returnTo)}>
+        {t("Manage devices")} <Icon name="arrow" />
+      </Button>
+    </section>
+  );
+}
 export function AppShell({
   children,
   route,
@@ -131,8 +149,16 @@ export function AppShell({
 }) {
   const { t } = useLocale();
 
-  const { identity, account, loading, error, deviceNotice, logout, refresh } =
-    useAuth();
+  const {
+    identity,
+    account,
+    loading,
+    error,
+    deviceNotice,
+    deviceLimitReached,
+    logout,
+    refresh,
+  } = useAuth();
   const { t: translate } = useLocale();
   const router = useRouter();
   const nav = admin ? adminNav : studentNav;
@@ -247,13 +273,7 @@ export function AppShell({
           </div>
           <div className="row">
             <LanguageSelector />
-            <Link
-              className="icon-btn"
-              href="/notifications"
-              aria-label={t("Notifications")}
-            >
-              <Icon name="bell" />
-            </Link>
+            <NotificationBell />
             <button
               className="icon-btn"
               onClick={() => setMenu(true)}
@@ -276,13 +296,17 @@ export function AppShell({
             </div>
           ) : null}
           <div key={route} className="page-enter">
-            {deviceNotice && route !== "/devices" ? (
+            {deviceNotice && !deviceLimitReached && route !== "/devices" ? (
               <div className="notice">
-                {deviceNotice}{" "}
+                {t(deviceNotice)}{" "}
                 <Link href="/devices">{t("Manage devices")}</Link>
               </div>
             ) : null}
-            {children}
+            {deviceLimitReached && route !== "/devices" ? (
+              <DeviceLimitNotice returnTo={route} />
+            ) : (
+              children
+            )}
           </div>
         </main>
       </div>

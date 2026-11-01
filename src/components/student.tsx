@@ -2,7 +2,10 @@
 import { useLocale } from "./locale";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { PendingPayments } from "./qr-payments";
+import { AcademyLibrary, useAcademyCourses } from "./academy-library";
+import { PushNotificationControl } from "./notifications";
 import type {
   Course,
   Dashboard,
@@ -49,17 +52,28 @@ export function DashboardPage({
   const { data, error, loading } = useData<Dashboard>(
     account ? "/me/dashboard" : null,
   );
-  const { data: allCourses } = useData<Course[]>("/catalog");
-  const courses = allCourses?.filter((c) =>
-    account?.purchases.some((p) => p.courseId === c.id && !p.revokedAt),
-  );
+  const { data: courses } = useAcademyCourses("owned");
   if (loading) return <Loading />;
   if (error) return <Message error>{error}</Message>;
-  const latest = data?.progress[0];
-  const lesson = latest?.video.lessons[0];
+  const ownedLessons =
+    courses?.flatMap((c) =>
+      c.sections.flatMap((s) =>
+        s.lessons.map((l) => ({
+          ...l,
+          section: { course: { title: c.title, slug: c.slug } },
+        })),
+      ),
+    ) || [];
+  const visibleProgress =
+    data?.progress.filter((p) =>
+      ownedLessons.some((l) => l.videoId === p.videoId),
+    ) || [];
+  const latest = visibleProgress[0];
+  const lesson = ownedLessons.find((l) => l.videoId === latest?.videoId);
   const total =
     courses?.flatMap((c) => c.sections.flatMap((s) => s.lessons)).length || 0;
-  const completed = data?.progress.filter((p) => p.completedAt).length || 0;
+  const completed =
+    courses?.reduce((n, c) => n + c.learning.completedLessons, 0) || 0;
   return (
     <>
       <Heading
@@ -82,9 +96,10 @@ export function DashboardPage({
           {t(", including adult or parent-managed account details.")}
         </Message>
       ) : null}
+      <PushNotificationControl compact />
       <div className="dashboard-grid">
         <div>
-          {lesson ? (
+          {lesson && latest ? (
             <div className="continue-card">
               <img src="/images/kumite.jpg" alt="Training reference" />
               <div className="stack">
@@ -140,8 +155,14 @@ export function DashboardPage({
             <h3>{t("Your learning records")}</h3>
           </div>
           <div className="mini-list">
-            {data?.progress.map((p) => (
-              <Link key={p.videoId} href={"/lessons/" + p.video.lessons[0]?.id}>
+            {visibleProgress.map((p) => (
+              <Link
+                key={p.videoId}
+                href={
+                  "/lessons/" +
+                  ownedLessons.find((l) => l.videoId === p.videoId)!.id
+                }
+              >
                 <div className="stack sm" style={{ flex: 1 }}>
                   <h4>{p.video.title}</h4>
                   <p>
@@ -763,6 +784,10 @@ export function AccountPage({ route }: { route: string }) {
   const [message, setMessage] = useState("");
   const [failure, setFailure] = useState("");
   const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    window.addEventListener("geki:notifications-read", reload);
+    return () => window.removeEventListener("geki:notifications-read", reload);
+  }, [reload]);
   async function save(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const f = new FormData(e.currentTarget);
@@ -795,6 +820,7 @@ export function AccountPage({ route }: { route: string }) {
           title={t("The updates that matter.")}
           description={t("Your account, purchases and learning access.")}
         />
+        <PushNotificationControl />
         <div className="table-wrap">
           {data?.notifications.length ? (
             data.notifications.map((n) => (
@@ -818,7 +844,17 @@ export function AccountPage({ route }: { route: string }) {
                       onClick={() =>
                         void api("/me/notifications/" + n.id, {
                           method: "PATCH",
-                        }).then(reload)
+                        })
+                          .then(() => {
+                            window.dispatchEvent(
+                              new Event("geki:notifications-read"),
+                            );
+                          })
+                          .catch(() =>
+                            setFailure(
+                              "Could not update notification preferences.",
+                            ),
+                          )
                       }
                     >
                       {t("Mark read")}
@@ -831,6 +867,7 @@ export function AccountPage({ route }: { route: string }) {
             <Empty title={t("You’re all caught up.")} />
           )}
         </div>
+        {failure && <Message error>{failure}</Message>}
       </>
     );
   if (route === "/purchases" || route === "/membership")
@@ -843,6 +880,7 @@ export function AccountPage({ route }: { route: string }) {
             "One-time purchases. Ongoing access to each course you own.",
           )}
         />
+        <AcademyLibrary embedded />
         <PendingPayments />
         <div className="grid-3">
           {data?.purchases.map((p) => (
@@ -955,6 +993,7 @@ export function AccountPage({ route }: { route: string }) {
 }
 export function DevicesPage() {
   const { t, language } = useLocale();
+  const router = useRouter();
 
   const { account, deviceNotice, refresh } = useAuth();
   const { data, error, loading, reload } = useData<Devices>(
@@ -984,6 +1023,16 @@ export function DevicesPage() {
       if (data?.devices.find((d) => d.id === remove)?.current)
         localStorage.removeItem(deviceStorageName());
       setRemove(null);
+      if (!data?.devices.some((d) => d.current)) {
+        await registerCurrentDevice();
+        await refresh();
+        const next = new URLSearchParams(window.location.search).get("next");
+        router.push(
+          next && /^\/(?!\/)/.test(next) && !/[\\\x00-\x1f]/.test(next)
+            ? next
+            : "/dashboard",
+        );
+      }
       reload();
     } catch (e) {
       setFailure(e instanceof Error ? e.message : "Unable to remove device.");
@@ -1031,9 +1080,9 @@ export function DevicesPage() {
             ) : null}
             {!data?.devices.some((d) => d.current) ? (
               <div className="stack">
-                {deviceNotice ? <p>{deviceNotice}</p> : null}
+                {deviceNotice ? <p>{t(deviceNotice)}</p> : null}
                 <Button
-                  disabled={busy}
+                  disabled={busy || (data?.devices.length ?? 0) >= 2}
                   onClick={async () => {
                     setBusy(true);
                     setFailure("");

@@ -85,6 +85,8 @@ jobs:
       - run: npm run db:generate
       - name: Apply migrations and database security to disposable Postgres
         run: npm run db:migrate
+      - name: Install Chromium for authenticated Academy library checks
+        run: npx --no-install playwright install --with-deps chromium
       - name: Run authenticated API and payment tests against the emulator
         run: npx --no-install firebase emulators:exec --only auth --project demo-geki-academy "npm run test:ci"
 

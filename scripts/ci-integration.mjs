@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
 import { copyFile, mkdir } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
+import webpush from "web-push";
 
 // These tests create purchases and users. Never accept a hosted database or live Auth.
 const database = new URL(process.env.DATABASE_URL || "postgresql://invalid");
@@ -18,6 +19,10 @@ assert.equal(process.env.MEDIA_MODE, "local");
 assert.equal(process.env.UPLOAD_DIR, ".local/ci-uploads");
 assert.equal(process.env.PORT, "3000");
 assert.equal(process.env.HOST, "127.0.0.1");
+const pushKeys = webpush.generateVAPIDKeys();
+process.env.WEB_PUSH_PUBLIC_KEY = pushKeys.publicKey;
+process.env.WEB_PUSH_PRIVATE_KEY = pushKeys.privateKey;
+process.env.WEB_PUSH_SUBJECT = "mailto:fixture@example.com";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const health = "http://127.0.0.1:3000/api/health";
@@ -99,8 +104,16 @@ try {
     await new Promise((resolve) => setTimeout(resolve, 250));
   }
   assert.ok(ready, "Next.js API did not become healthy within 120 seconds");
+  await finished(start("scripts/payment-email-test.ts"));
+  await finished(start("scripts/push-test.ts"));
+  await finished(start("scripts/device-entry-test.ts"));
+  await finished(start("scripts/notifications-read-test.ts"));
+  await finished(start("scripts/push-browser.cjs"));
   await finished(start("scripts/integration-test.ts"));
   await finished(start("scripts/qr-payments-test.ts"));
+  await finished(start("scripts/payment-ui-browser.cjs"));
+  await finished(start("scripts/prepare-academy-library.ts"));
+  await finished(start("scripts/academy-library-browser.cjs"));
 } finally {
   if (api.exitCode === null) {
     const closed = new Promise((resolve) => api.once("exit", resolve));

@@ -4,6 +4,11 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL("https://geki-academy.vercel.app"),
   applicationName: "GEKI Academy",
+  appleWebApp: {
+    capable: true,
+    title: "GEKI Academy",
+    statusBarStyle: "black-translucent",
+  },
   title: {
     default: "GEKI Academy — Master the Art. Build the Spirit.",
     template: "%s | GEKI Academy",
@@ -25,6 +30,7 @@ export const metadata: Metadata = {
       },
     ],
     shortcut: "/brand/geki-symbol-light.svg",
+    apple: "/icons/geki-192.png",
   },
   openGraph: {
     type: "website",

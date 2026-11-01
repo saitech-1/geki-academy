@@ -30,6 +30,11 @@ export type Course = {
   }[];
   quiz?: { id: string; published: boolean; questions?: Question[] } | null;
 };
+export type AcademyCourse = Course & {
+  learning: ReturnType<
+    typeof import("./course-learning").summarizeCourseLearning
+  >;
+};
 export type Question = {
   id?: string;
   prompt: string;

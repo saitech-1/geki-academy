@@ -11,14 +11,19 @@ import {
 import { onIdTokenChanged, signOut, type User } from "firebase/auth";
 import type { CurrentUser } from "@geki/contracts";
 import { firebaseAuth } from "@/lib/firebase";
-import { api, registerCurrentDevice } from "@/lib/api";
+import { api, registerCurrentDevice, ApiError } from "@/lib/api";
 import { LocaleProvider, SkipLink } from "./locale";
+import {
+  clearPushRegistration,
+  resetPushForOtherAccount,
+} from "@/lib/push-client";
 type Context = {
   identity: User | null;
   account: CurrentUser | null;
   loading: boolean;
   error: string;
   deviceNotice: string;
+  deviceLimitReached: boolean;
   refresh: () => Promise<void>;
   logout: () => Promise<void>;
 };
@@ -29,6 +34,7 @@ export function Providers({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [deviceNotice, setDeviceNotice] = useState("");
+  const [deviceLimitReached, setDeviceLimitReached] = useState(false);
   const authVersion = useRef(0);
   const refresh = useCallback(async () => {
     const user = firebaseAuth().currentUser;
@@ -43,7 +49,9 @@ export function Providers({ children }: { children: ReactNode }) {
     try {
       await registerCurrentDevice();
       setDeviceNotice("");
+      setDeviceLimitReached(false);
     } catch (e) {
+      setDeviceLimitReached(e instanceof ApiError && e.code === "DEVICE_LIMIT");
       setDeviceNotice(
         e instanceof Error ? e.message : "Unable to register this browser.",
       );
@@ -59,15 +67,19 @@ export function Providers({ children }: { children: ReactNode }) {
         setIdentity(user);
         setAccount(null);
         setDeviceNotice("");
+        setDeviceLimitReached(false);
         setError("");
         setLoading(true);
         try {
           if (user) {
             const me = await api<CurrentUser>("/me");
+            await resetPushForOtherAccount(me.id).catch(() => {});
             let notice = "";
+            let limitReached = false;
             try {
               await registerCurrentDevice();
             } catch (e) {
+              limitReached = e instanceof ApiError && e.code === "DEVICE_LIMIT";
               notice =
                 e instanceof Error
                   ? e.message
@@ -76,8 +88,9 @@ export function Providers({ children }: { children: ReactNode }) {
             if (active && version === authVersion.current) {
               setAccount(me);
               setDeviceNotice(notice);
+              setDeviceLimitReached(limitReached);
             }
-          }
+          } else await resetPushForOtherAccount(null).catch(() => {});
         } catch (e) {
           if (active && version === authVersion.current)
             setError(
@@ -97,8 +110,10 @@ export function Providers({ children }: { children: ReactNode }) {
     };
   }, []);
   const logout = async () => {
+    await clearPushRegistration().catch(() => {});
     await signOut(firebaseAuth());
     setAccount(null);
+    setDeviceLimitReached(false);
   };
   return (
     <AuthContext.Provider
@@ -108,6 +123,7 @@ export function Providers({ children }: { children: ReactNode }) {
         loading,
         error,
         deviceNotice,
+        deviceLimitReached,
         refresh,
         logout,
       }}

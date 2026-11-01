@@ -22,6 +22,13 @@ import { config } from "./config";
 import { HttpError, requireCondition } from "./domain";
 import { sendLocalMedia } from "./media";
 import { ReasonInput } from "@geki/contracts";
+import {
+  queuePaymentEmail,
+  emailConfigured,
+  PAYMENT_EMAIL,
+} from "./payment-email";
+import { safeRejectionMessage } from "./payment-email-templates";
+import { paymentPushNotifications } from "./push";
 
 export const qrCheckout = createEndpoints();
 export const learnerPayments = createEndpoints();
@@ -350,6 +357,8 @@ learnerPayments.post(
             },
           },
         });
+        await queuePaymentEmail(tx, old.id, "SUBMITTED");
+        await paymentPushNotifications(tx, old.id, "SUBMITTED");
         return updated;
       });
       keep = true;
@@ -388,6 +397,69 @@ async function proof(req: Request, res: Response) {
   );
 }
 learnerPayments.get("/:id/proof", proof);
+adminPayments.get("/email-delivery", async (_req, res) => {
+  const [pending, failed, recent, pendingPayments] = await Promise.all([
+    db.job.count({
+      where: { kind: PAYMENT_EMAIL, status: { in: ["PENDING", "PROCESSING"] } },
+    }),
+    db.job.count({
+      where: {
+        kind: PAYMENT_EMAIL,
+        OR: [{ status: "FAILED" }, { lastError: { not: null } }],
+      },
+    }),
+    db.job.findMany({
+      where: { kind: PAYMENT_EMAIL },
+      orderBy: { createdAt: "desc" },
+      take: 15,
+      select: {
+        id: true,
+        status: true,
+        attempts: true,
+        lastError: true,
+        createdAt: true,
+        payload: true,
+      },
+    }),
+    db.paymentOrder.count({ where: { status: "SUBMITTED" } }),
+  ]);
+  res.json({
+    configured: emailConfigured(),
+    mode: process.env.PAYMENT_NOTIFICATION_MODE || "testing",
+    pending,
+    failed,
+    pendingPayments,
+    recent: recent.map(({ payload, ...job }) => {
+      const details = payload as Record<string, unknown>;
+      return {
+        ...job,
+        event: details.event,
+        audience: details.audience,
+        orderId: details.orderId,
+        providerId: details.providerId,
+      };
+    }),
+  });
+});
+adminPayments.post("/email-delivery/retry", async (_req, res) => {
+  await db.job.updateMany({
+    where: {
+      kind: PAYMENT_EMAIL,
+      status: { in: ["PENDING", "FAILED"] },
+      OR: [
+        { lastError: null },
+        { lastError: { not: "PROVIDER_REVIEW_REQUIRED" } },
+      ],
+    },
+    data: {
+      status: "PENDING",
+      runAt: new Date(),
+      attempts: 0,
+      lastError: null,
+    },
+  });
+  res.json({ queued: true });
+});
 adminPayments.get("/", async (req, res) => {
   const status = z
     .enum(["SUBMITTED", "APPROVED", "REJECTED", "AWAITING_PAYMENT", "ALL"])
@@ -405,9 +477,19 @@ adminPayments.get("/", async (req, res) => {
     }),
   );
 });
+adminPayments.get("/summary", async (_req, res) => {
+  const groups = await db.paymentOrder.groupBy({
+    by: ["status"],
+    _count: true,
+  });
+  res.json(
+    Object.fromEntries(groups.map((group) => [group.status, group._count])),
+  );
+});
 adminPayments.get("/:id/proof", proof);
 adminPayments.post("/:id/review", async (req, res) => {
   const input = ReasonInput.extend({
+    customerMessage: z.string().trim().min(8).max(500).optional(),
     decision: z.enum(["APPROVE", "REJECT"]),
     verifiedInKbzPay: z.boolean().default(false),
     bankReference: z
@@ -496,27 +578,19 @@ adminPayments.post("/:id/review", async (req, res) => {
         status: input.decision === "APPROVE" ? "APPROVED" : "REJECTED",
         reviewedAt: new Date(),
         reviewerId: req.account.id,
-        reviewReason: input.reason,
+        reviewReason:
+          input.decision === "REJECT"
+            ? input.customerMessage || safeRejectionMessage
+            : "Payment verified. Course access is active.",
       },
       select,
     });
-    await tx.notification.create({
-      data: {
-        userId: current.userId,
-        title:
-          input.decision === "APPROVE"
-            ? "Payment confirmed — your course is unlocked"
-            : "Payment needs attention",
-        body:
-          input.decision === "APPROVE"
-            ? "Your KBZPay payment was verified. You now have ongoing access to your course."
-            : input.reason,
-        href:
-          input.decision === "APPROVE"
-            ? "/purchases"
-            : "/checkout/" + updated.course.slug,
-      },
-    });
+    await paymentPushNotifications(
+      tx,
+      current.id,
+      input.decision === "APPROVE" ? "APPROVED" : "REJECTED",
+      req.account.id,
+    );
     await tx.auditEvent.create({
       data: {
         actorId: req.account.id,
@@ -530,6 +604,12 @@ adminPayments.post("/:id/review", async (req, res) => {
         },
       },
     });
+    await queuePaymentEmail(
+      tx,
+      current.id,
+      input.decision === "APPROVE" ? "APPROVED" : "REJECTED",
+      input.reason,
+    );
     return updated;
   });
   res.json({

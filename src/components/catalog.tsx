@@ -1,13 +1,23 @@
 "use client";
 import { RevealSection } from "./motion";
 import { KbzPayCheckout } from "./qr-payments";
+import { useAcademyCourses } from "./academy-library";
 import { useState } from "react";
 import Link from "next/link";
 import type { Course } from "@/lib/types";
 import { useData, useAuth } from "./providers";
 import { useLocale } from "./locale";
-import { PublicNav, Footer, PublicLayout } from "./shell";
-import { Button, Icon, Badge, Heading, Loading, Message, Empty } from "./ui";
+import { PublicNav, Footer, PublicLayout, DeviceLimitNotice } from "./shell";
+import {
+  Button,
+  Icon,
+  Badge,
+  Heading,
+  Loading,
+  Message,
+  Empty,
+  ProgressBar,
+} from "./ui";
 export function CourseCard({ course }: { course: Course }) {
   const { account } = useAuth();
   const owned =
@@ -275,7 +285,8 @@ export function CourseDetail({ slug }: { slug: string }) {
     loading,
   } = useData<Course>("/courses/" + encodeURIComponent(slug));
   const { account } = useAuth();
-  if (loading)
+  const access = useAcademyCourses("catalog");
+  if (loading || (account && access.loading && !access.data))
     return (
       <PublicLayout>
         <Loading />
@@ -287,9 +298,8 @@ export function CourseDetail({ slug }: { slug: string }) {
         <Message error>{error || "Course not found."}</Message>
       </PublicLayout>
     );
-  const ownsCourse =
-    !!account &&
-    account.purchases.some((p) => p.courseId === course.id && !p.revokedAt);
+  const learning = access.data?.find((c) => c.id === course.id)?.learning;
+  const ownsCourse = !!learning?.hasAccess;
   const first = course.sections.flatMap((s) => s.lessons)[0];
   return (
     <PublicLayout>
@@ -316,15 +326,38 @@ export function CourseDetail({ slug }: { slug: string }) {
               {course.sections.flatMap((s) => s.lessons).length} {t("lessons")}
             </span>
           </div>
-          {first ? (
+          {account && access.error ? (
+            <>
+              <Message error>{access.error}</Message>
+              <Button secondary onClick={access.reload}>
+                {t("Refresh courses")}
+              </Button>
+            </>
+          ) : first ? (
             <Button
               href={
-                ownsCourse ? "/lessons/" + first.id : "/checkout/" + course.slug
+                ownsCourse
+                  ? "/lessons/" + (learning?.resumeLessonId || first.id)
+                  : "/checkout/" + course.slug
               }
             >
-              {t(ownsCourse ? t("Start course") : t("Pay course fee"))}
+              {t(
+                ownsCourse
+                  ? "Continue Learning"
+                  : learning?.status === "PENDING_PAYMENT"
+                    ? "View payment status"
+                    : "Pay course fee",
+              )}
               <Icon name="arrow" />
             </Button>
+          ) : null}
+          {ownsCourse && learning ? (
+            <div className="academy-course-progress">
+              <ProgressBar
+                value={learning.percent}
+                label={t("Course progress")}
+              />
+            </div>
           ) : null}
           <Badge>{t("One payment / Ongoing course access")}</Badge>
           <p>
@@ -408,9 +441,16 @@ export function CourseDetail({ slug }: { slug: string }) {
   );
 }
 export function CourseCheckout({ slug }: { slug: string }) {
+  const { deviceLimitReached } = useAuth();
   const { data: course, error } = useData<Course>(
     "/courses/" + encodeURIComponent(slug),
   );
+  if (deviceLimitReached)
+    return (
+      <PublicLayout>
+        <DeviceLimitNotice returnTo={"/checkout/" + slug} />
+      </PublicLayout>
+    );
   if (error)
     return (
       <PublicLayout>

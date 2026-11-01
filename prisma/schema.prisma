@@ -191,7 +191,20 @@ model Device {
   revokedAt DateTime?
   createdAt DateTime @default(now())
   lastSeenAt DateTime @default(now())
+  pushSubscription PushSubscription?
   @@index([userId, revokedAt])
+  @@schema("geki")
+}
+model PushSubscription {
+  id String @id @default(cuid())
+  deviceId String @unique
+  device Device @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  endpoint String @unique
+  p256dh String
+  auth String
+  keyId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
   @@schema("geki")
 }
 model DeviceReplacement {

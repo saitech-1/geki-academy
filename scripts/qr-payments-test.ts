@@ -155,6 +155,28 @@ try {
   );
   assert.equal(submitted.status, 200);
   assert.equal(submitted.data.status, "SUBMITTED");
+  assert.equal(
+    (await call("/me/course-library?scope=owned", a.token)).data.some(
+      (c: any) => c.id === course.id,
+    ),
+    false,
+  );
+  assert.equal(
+    (await call("/me/course-library?scope=catalog", a.token)).data.find(
+      (c: any) => c.id === course.id,
+    ).learning.status,
+    "PENDING_PAYMENT",
+  );
+  assert.equal(
+    await db.job.count({
+      where: {
+        kind: "PAYMENT_EMAIL",
+        payload: { path: ["text"], string_contains: `Order: ${order.id}` },
+      },
+    }),
+    2,
+    "Receipt submission must atomically queue admin and student emails",
+  );
   assert.equal("proofPath" in submitted.data, false);
   assert.equal(
     await db.coursePurchase.count({ where: { userId: a.user.id } }),
@@ -243,6 +265,12 @@ try {
     0,
   );
   assert.equal(
+    (await call("/me/course-library?scope=catalog", a.token)).data.find(
+      (c: any) => c.id === course.id,
+    ).learning.status,
+    "PAYMENT_REJECTED",
+  );
+  assert.equal(
     (
       await call(
         `/me/payment-orders/${order.id}/proof`,
@@ -288,11 +316,58 @@ try {
     1,
   );
   assert.equal((await make()).status, 409);
+  assert.equal(
+    (await call("/me/course-library?scope=owned", a.token)).data.find(
+      (c: any) => c.id === course.id,
+    ).learning.hasAccess,
+    true,
+  );
+  assert.equal(
+    (await call("/me/course-library?scope=owned", b.token)).data.some(
+      (c: any) => c.id === course.id,
+    ),
+    false,
+  );
+  const emails = await db.job.findMany({
+    where: {
+      kind: "PAYMENT_EMAIL",
+      payload: { path: ["text"], string_contains: `Order: ${order.id}` },
+    },
+  });
+  assert.equal(
+    emails.length,
+    8,
+    "Two submissions, rejection and approval create eight messages without duplicate approval emails",
+  );
+  assert.equal(
+    emails.filter((e) => {
+      const p = e.payload as { event: string; audience: string };
+      return p.event === "APPROVED" && p.audience === "student";
+    }).length,
+    1,
+    "Approval confirmation must go to the learner only once",
+  );
+  assert.equal(
+    (await call("/admin/payment-orders/email-delivery", a.token)).status,
+    403,
+  );
+  assert.equal(
+    (await call("/admin/payment-orders/email-delivery/retry", a.token, "POST"))
+      .status,
+    403,
+  );
   assert.equal((await review({ decision: "REJECT", reason })).status, 409);
   await db.coursePurchase.updateMany({
     where: { userId: a.user.id, courseId: course.id },
     data: { revokedAt: new Date() },
   });
+  assert.equal(
+    (await call("/me/course-library?scope=owned", a.token)).data.some(
+      (c: any) => c.id === course.id,
+    ),
+    false,
+    "Revoked purchases must leave the course library",
+  );
   assert.equal(
     (await review({ decision: "APPROVE", verifiedInKbzPay: true, reason }))
       .status,

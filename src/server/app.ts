@@ -30,6 +30,8 @@ import {
   hasCaptionText,
 } from "./protected-video";
 import { qrCheckout, learnerPayments, adminPayments } from "./qr-payments";
+import { academyCourses } from "./course-library";
+import { pushEndpoints } from "./push";
 const app = createEndpoints();
 app.use(
   "/api",
@@ -318,7 +320,7 @@ app.get("/api/me/dashboard", async (req, res) => {
         take: 30,
       }),
       db.notification.findMany({
-        where: { userId: req.account.id },
+        where: { userId: req.account.id, readAt: null },
         orderBy: { createdAt: "desc" },
         take: 50,
       }),
@@ -340,6 +342,13 @@ app.get("/api/me/dashboard", async (req, res) => {
     ]);
   res.json({ progress, attempts, notifications, purchases, payments });
 });
+app.get("/api/me/course-library", async (req, res) => {
+  const scope = z
+    .enum(["owned", "catalog"])
+    .default("owned")
+    .parse(req.query.scope);
+  res.json(await academyCourses(db, req.account.id, scope === "owned"));
+});
 app.patch("/api/me/notifications/:id", async (req, res) => {
   await db.notification.updateMany({
     where: { id: id(req), userId: req.account.id },
@@ -347,6 +356,25 @@ app.patch("/api/me/notifications/:id", async (req, res) => {
   });
   res.json({ ok: true });
 });
+app.get("/api/me/notifications", async (req, res) => {
+  const [items, unread] = await Promise.all([
+    db.notification.findMany({
+      where: { userId: req.account.id, readAt: null },
+      orderBy: { createdAt: "desc" },
+      take: 30,
+    }),
+    db.notification.count({ where: { userId: req.account.id, readAt: null } }),
+  ]);
+  res.json({ userId: req.account.id, items, unread });
+});
+app.post("/api/me/notifications/read-all", async (req, res) => {
+  await db.notification.updateMany({
+    where: { userId: req.account.id, readAt: null },
+    data: { readAt: new Date() },
+  });
+  res.json({ unread: 0 });
+});
+app.use("/api/me/push", pushEndpoints);
 app.get("/api/me/devices", async (req, res) => {
   const [devices, replacements] = await Promise.all([
     db.device.findMany({
@@ -406,7 +434,7 @@ app.post("/api/me/devices", async (req, res) => {
       count < 2,
       409,
       "DEVICE_LIMIT",
-      "Two devices are already registered. Remove one to continue.",
+      "You already have two devices registered. Please remove one in My Devices before continuing.",
     );
     return tx.device.create({
       data: {

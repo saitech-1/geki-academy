@@ -47,11 +47,50 @@ export function deviceLabel() {
             : "browser";
   return `${os} · ${browser}`;
 }
-export async function registerCurrentDevice() {
-  return api("/me/devices", {
-    method: "POST",
-    body: json({ key: deviceKey(), label: deviceLabel() }),
-  });
+const registrations = new Map<string, Promise<unknown>>();
+export function registerCurrentDevice() {
+  const user = firebaseAuth().currentUser;
+  if (!user)
+    return Promise.reject(
+      new ApiError("Sign in to register this browser.", "UNAUTHENTICATED", 401),
+    );
+  const pending = registrations.get(user.uid);
+  if (pending) return pending;
+  const operation = (async () => {
+    const key = deviceKey();
+    const register = () =>
+      api("/me/devices", {
+        method: "POST",
+        body: json({ key: deviceKey(), label: deviceLabel() }),
+      });
+    try {
+      return await register();
+    } catch (error) {
+      if (
+        !(error instanceof ApiError) ||
+        error.code !== "DEVICE_REVOKED" ||
+        firebaseAuth().currentUser?.uid !== user.uid
+      )
+        throw error;
+      // A removed registration must never be revived. Retry once with a fresh
+      // key; the server still enforces the same two-device limit.
+      const storageName = deviceStorageName();
+      if (localStorage.getItem(storageName) === key)
+        localStorage.removeItem(storageName);
+      const { clearPushRegistration } = await import("./push-client");
+      await clearPushRegistration().catch(() => {});
+      if (firebaseAuth().currentUser?.uid !== user.uid) throw error;
+      return register();
+    }
+  })();
+  registrations.set(user.uid, operation);
+  void operation
+    .finally(() => {
+      if (registrations.get(user.uid) === operation)
+        registrations.delete(user.uid);
+    })
+    .catch(() => {});
+  return operation;
 }
 export async function api<T>(path: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers);

@@ -10,7 +10,17 @@ import {
 import { api, apiBlob, json } from "@/lib/api";
 import type { Course } from "@/lib/types";
 import { useAuth, useData } from "./providers";
-import { Heading, Button, Badge, Message, Modal, Loading, Empty } from "./ui";
+import { PushNotificationControl } from "./notifications";
+import {
+  Heading,
+  Button,
+  Badge,
+  Message,
+  Modal,
+  Loading,
+  Empty,
+  Icon,
+} from "./ui";
 type Order = {
   id: string;
   courseId: string;
@@ -48,7 +58,7 @@ export function PendingPayments() {
   const { data, error } = useData<Order[]>(
     account ? "/me/payment-orders" : null,
   );
-  const pending = data?.filter((o) => o.status !== "APPROVED");
+  const pending = data;
   return (
     <>
       {error ? <Message error>{error}</Message> : null}
@@ -63,10 +73,19 @@ export function PendingPayments() {
                   {money(o)} · {t(stateLabel(o.status))}
                 </p>
               </div>
-              <Button secondary href={"/checkout/" + o.course.slug}>
-                {o.status === "SUBMITTED"
-                  ? t("View payment status")
-                  : t("Continue payment")}
+              <Button
+                secondary
+                href={
+                  o.status === "APPROVED"
+                    ? "/my-learning"
+                    : "/checkout/" + o.course.slug
+                }
+              >
+                {o.status === "APPROVED"
+                  ? t("My Course Library")
+                  : o.status === "SUBMITTED"
+                    ? t("View payment status")
+                    : t("Continue payment")}
               </Button>
             </div>
           ))}
@@ -439,11 +458,143 @@ export function KbzPayCheckout({ course }: { course: Course }) {
   );
 }
 
+function PaymentEmailStatus() {
+  const { t } = useLocale();
+  const { account } = useAuth();
+  const {
+    data,
+    error: loadError,
+    reload,
+  } = useData<{
+    configured: boolean;
+    pending: number;
+    failed: number;
+    mode: string;
+    pendingPayments: number;
+    recent: {
+      id: string;
+      status: string;
+      event?: string;
+      audience?: string;
+      orderId?: string;
+      attempts: number;
+      lastError?: string;
+      providerId?: string;
+    }[];
+  }>(
+    account && account.role !== "STUDENT"
+      ? "/admin/payment-orders/email-delivery"
+      : null,
+  );
+  useEffect(() => {
+    if (!data?.pending) return;
+    const timer = setInterval(reload, 15000);
+    return () => clearInterval(timer);
+  }, [data?.pending, reload]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  return (
+    <section className="panel stack" aria-label={t("Payment emails")}>
+      <strong>{t("Payment emails")}</strong>
+      {data && (
+        <p>
+          {t("Pending Payment")}: {data.pendingPayments} ·{" "}
+          {t(
+            data.mode === "testing"
+              ? "Testing mode — emails go to the admin inbox only."
+              : "Production email delivery",
+          )}
+        </p>
+      )}
+      {data ? (
+        <>
+          <p>
+            {t(
+              data.configured
+                ? "Email sending is configured."
+                : "Email sending needs setup. Payment requests are still saved.",
+            )}
+          </p>
+          <small>
+            {t("Queued")}: {data.pending} · {t("Needs attention")}:{" "}
+            {data.failed}
+          </small>
+          {(data.pending > 0 || data.failed > 0) && (
+            <Button
+              secondary
+              disabled={busy || !data.configured}
+              onClick={async () => {
+                setBusy(true);
+                setError("");
+                setNotice("");
+                try {
+                  await api("/admin/payment-orders/email-delivery/retry", {
+                    method: "POST",
+                  });
+                  reload();
+                  setNotice("Email retries queued.");
+                } catch {
+                  setError("Could not retry email delivery.");
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            >
+              {t(busy ? "Queuing…" : "Retry email delivery")}
+            </Button>
+          )}
+        </>
+      ) : loadError ? (
+        <Button secondary onClick={reload}>
+          {t("Reload email status")}
+        </Button>
+      ) : (
+        <small>{t("Loading email status…")}</small>
+      )}
+      {error && <Message error>{t(error)}</Message>}
+      {notice && <Message>{t(notice)}</Message>}
+      {!!data?.recent?.length && (
+        <details>
+          <summary>{t("Notification delivery history")}</summary>
+          <ul className="email-delivery-history">
+            {data.recent.map((job) => (
+              <li key={job.id}>
+                <strong>
+                  {job.event || t("Payment emails")} ·{" "}
+                  {job.audience || "notification"}
+                </strong>
+                <small>
+                  {job.orderId} ·{" "}
+                  {t(
+                    job.status === "SENT"
+                      ? "Accepted by email provider"
+                      : job.status,
+                  )}{" "}
+                  · {job.attempts} {t("attempts")}
+                </small>
+                {job.lastError && <small>{job.lastError}</small>}
+                {job.providerId && <small>ID: {job.providerId}</small>}
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </section>
+  );
+}
+
 export function AdminPaymentReviews() {
   const { t } = useLocale();
 
   const { account } = useAuth();
   const [filter, setFilter] = useState("SUBMITTED");
+  const [search, setSearch] = useState("");
+  const summary = useData<Record<string, number>>(
+    account && account.role !== "STUDENT"
+      ? "/admin/payment-orders/summary"
+      : null,
+  );
   const { data, error, loading, reload } = useData<Order[]>(
     account && account.role !== "STUDENT"
       ? "/admin/payment-orders?status=" + filter
@@ -451,10 +602,32 @@ export function AdminPaymentReviews() {
   );
   const [selected, setSelected] = useState<Order | null>(null);
   const [reason, setReason] = useState("");
+  const [customerMessage, setCustomerMessage] = useState("");
+  const [success, setSuccess] = useState("");
   const [verified, setVerified] = useState(false);
   const [bankReference, setBankReference] = useState("");
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState("");
+  useEffect(() => {
+    if (!account || account.role === "STUDENT") return;
+    const refresh = () => {
+      if (document.visibilityState === "visible") {
+        reload();
+        summary.reload();
+      }
+    };
+    const timer = setInterval(refresh, 15000);
+    window.addEventListener("focus", refresh);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener("focus", refresh);
+    };
+  }, [account?.id, reload, summary.reload]);
+  const results = data?.filter((order) =>
+    `${order.user?.displayName} ${order.user?.email} ${order.course.title}`
+      .toLocaleLowerCase()
+      .includes(search.trim().toLocaleLowerCase()),
+  );
   async function review(decision: string) {
     if (!selected) return;
     setBusy(true);
@@ -464,6 +637,9 @@ export function AdminPaymentReviews() {
         method: "POST",
         body: json({
           decision,
+          ...(decision === "REJECT" && customerMessage.trim()
+            ? { customerMessage: customerMessage.trim() }
+            : {}),
           verifiedInKbzPay: verified,
           ...(bankReference.trim()
             ? { bankReference: bankReference.trim() }
@@ -472,7 +648,14 @@ export function AdminPaymentReviews() {
         }),
       });
       setSelected(null);
+      setSuccess(
+        decision === "APPROVE"
+          ? "Payment approved. Enrollment activated and notification emails queued."
+          : "Payment rejected. Notification emails queued.",
+      );
+      window.dispatchEvent(new Event("geki:payment-updated"));
       reload();
+      summary.reload();
     } catch (e) {
       setFailure(e instanceof Error ? e.message : "Payment review failed.");
     } finally {
@@ -483,28 +666,99 @@ export function AdminPaymentReviews() {
     <>
       <Heading
         eyebrow={t("PAYMENT OPERATIONS")}
-        title={t("Verify. Then unlock.")}
+        title={t("Payments, under control.")}
         description={t(
-          "Confirm incoming KBZPay transfers before granting course access.",
+          "A clear review. A confident confirmation. Learning unlocked.",
         )}
       />
-      <label>
-        {t("Payment status")}
-        <select value={filter} onChange={(e) => setFilter(e.target.value)}>
-          {["SUBMITTED", "APPROVED", "REJECTED", "AWAITING_PAYMENT", "ALL"].map(
-            (s) => (
+      <div className="payment-metrics" aria-label={t("Payment overview")}>
+        {[
+          {
+            key: "SUBMITTED",
+            label: "Ready for review",
+            icon: "bell" as const,
+            tone: "red",
+            hint: "Match the transfer, then confirm.",
+          },
+          {
+            key: "APPROVED",
+            label: "Confirmed payments",
+            icon: "check" as const,
+            tone: "green",
+            hint: "Course access is active.",
+          },
+          {
+            key: "REJECTED",
+            label: "Needs correction",
+            icon: "card" as const,
+            tone: "amber",
+            hint: "Clear feedback. A safe retry.",
+          },
+        ].map((metric) => (
+          <button
+            type="button"
+            key={metric.key}
+            className={`payment-metric ${metric.tone} ${filter === metric.key ? "selected" : ""}`}
+            onClick={() => setFilter(metric.key)}
+            aria-pressed={filter === metric.key}
+          >
+            <span className="payment-metric-top">
+              <span className="payment-metric-icon">
+                <Icon name={metric.icon} />
+              </span>
+              <span>{t(metric.label)}</span>
+              <Icon name="up" />
+            </span>
+            <strong>
+              {summary.data ? summary.data[metric.key] || 0 : "—"}
+            </strong>
+            <small>{t(metric.hint)}</small>
+          </button>
+        ))}
+      </div>
+      <PushNotificationControl compact />
+      {success && <Message>{t(success)}</Message>}
+      <div className="payment-toolbar">
+        <div className="search">
+          <Icon name="search" />
+          <input
+            aria-label={t("Search payment requests")}
+            placeholder={t("Find a learner or course")}
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+        </div>
+        <label>
+          {t("Payment status")}
+          <select value={filter} onChange={(e) => setFilter(e.target.value)}>
+            {[
+              "SUBMITTED",
+              "APPROVED",
+              "REJECTED",
+              "AWAITING_PAYMENT",
+              "ALL",
+            ].map((s) => (
               <option key={s} value={s}>
                 {s === "ALL" ? t("All payments") : t(stateLabel(s))}
               </option>
-            ),
-          )}
-        </select>
-      </label>
+            ))}
+          </select>
+        </label>
+        <Button
+          secondary
+          onClick={() => {
+            reload();
+            summary.reload();
+          }}
+        >
+          {t("Refresh")}
+        </Button>
+      </div>
       {error ? <Message error>{error}</Message> : null}
-      {loading ? (
+      {loading && !data ? (
         <Loading />
-      ) : data?.length ? (
-        <div className="table-wrap">
+      ) : results?.length ? (
+        <div className="table-wrap payment-review-table">
           <table>
             <thead>
               <tr>
@@ -512,7 +766,6 @@ export function AdminPaymentReviews() {
                   "Learner",
                   "Course",
                   "Expected amount",
-                  "Transaction",
                   "Status",
                   "Review",
                 ].map((h) => (
@@ -521,26 +774,50 @@ export function AdminPaymentReviews() {
               </tr>
             </thead>
             <tbody>
-              {data.map((o) => (
+              {results.map((o) => (
                 <tr key={o.id}>
-                  <td>
-                    {o.user?.displayName}
-                    <small className="block">{o.user?.email}</small>
+                  <td data-label={t("Learner")}>
+                    <div className="payment-learner">
+                      <span className="payment-avatar" aria-hidden="true">
+                        {(o.user?.displayName || "G").slice(0, 2).toUpperCase()}
+                      </span>
+                      <div>
+                        <strong>{o.user?.displayName}</strong>
+                        <small className="block">{o.user?.email}</small>
+                      </div>
+                    </div>
                   </td>
-                  <td>{o.course.title}</td>
-                  <td>{money(o)}</td>
-                  <td>{o.transactionId || "See receipt"}</td>
-                  <td>
-                    <Badge tone={o.status === "APPROVED" ? "green" : "amber"}>
+                  <td data-label={t("Course")}>
+                    <span className="payment-course-title">
+                      {o.course.title}
+                    </span>
+                    <small className="block">
+                      KBZPay · {t("Receipt review")}
+                    </small>
+                  </td>
+                  <td data-label={t("Expected amount")}>
+                    <strong className="payment-amount">{money(o)}</strong>
+                  </td>
+                  <td data-label={t("Status")}>
+                    <Badge
+                      tone={
+                        o.status === "APPROVED"
+                          ? "green"
+                          : o.status === "REJECTED"
+                            ? "red"
+                            : "amber"
+                      }
+                    >
                       {t(stateLabel(o.status))}
                     </Badge>
                   </td>
-                  <td>
+                  <td data-label={t("Review")}>
                     <Button
                       secondary
                       onClick={() => {
                         setSelected(o);
                         setReason("");
+                        setCustomerMessage("");
                         setVerified(false);
                         setBankReference("");
                         setFailure("");
@@ -555,15 +832,49 @@ export function AdminPaymentReviews() {
           </table>
         </div>
       ) : (
-        <Empty title={t("No payments in this queue.")} />
+        <Empty
+          title={t(
+            search ? "No matching payments." : "Your review queue is clear.",
+          )}
+        >
+          <p>
+            {t(
+              search
+                ? "Try another learner name or course."
+                : "New payment screenshots will appear here, ready for your review.",
+            )}
+          </p>
+        </Empty>
       )}
+      <details className="payment-delivery-drawer">
+        <summary>
+          <span>
+            <Icon name="bell" />
+            {t("Notification delivery")}
+          </span>
+          <Icon name="down" />
+        </summary>
+        <PaymentEmailStatus />
+      </details>
       {selected ? (
         <Modal
           title={t("Verify KBZPay payment")}
           dismissible={!busy}
           onClose={() => setSelected(null)}
         >
-          <div className="stack">
+          <div className="stack payment-review-dialog">
+            {selected.status === "SUBMITTED" && (
+              <ol className="payment-review-steps">
+                {["Check receipt", "Verify transfer", "Confirm access"].map(
+                  (step, i) => (
+                    <li key={step}>
+                      <span>{i + 1}</span>
+                      {t(step)}
+                    </li>
+                  ),
+                )}
+              </ol>
+            )}
             <Badge>{t(stateLabel(selected.status))}</Badge>
             <h3>{selected.course.title}</h3>
             <div className="payment-total">{money(selected)}</div>
@@ -627,10 +938,32 @@ export function AdminPaymentReviews() {
                     value={reason}
                     onChange={(e) => setReason(e.target.value)}
                     placeholder={t(
-                      "Record your check, or explain what the student must correct.",
+                      "Record verification details for the internal audit log.",
                     )}
                   />
                 </label>
+                <details className="correction-message">
+                  <summary>{t("Message to learner (for rejection)")}</summary>
+                  <label>
+                    {t("Message to learner (for rejection)")}
+                    <textarea
+                      value={customerMessage}
+                      minLength={8}
+                      maxLength={500}
+                      onChange={(event) =>
+                        setCustomerMessage(event.target.value)
+                      }
+                      placeholder={t(
+                        "Explain what to correct. Leave blank to send the safe standard message.",
+                      )}
+                    />
+                  </label>
+                </details>
+                <small>
+                  {t(
+                    "Review reason is an internal audit note. Only the learner message is shared with the student.",
+                  )}
+                </small>
                 <div className="row wrap">
                   <Button
                     disabled={
@@ -646,7 +979,12 @@ export function AdminPaymentReviews() {
                   </Button>
                   <Button
                     secondary
-                    disabled={busy || reason.trim().length < 8}
+                    disabled={
+                      busy ||
+                      reason.trim().length < 8 ||
+                      (customerMessage.trim().length > 0 &&
+                        customerMessage.trim().length < 8)
+                    }
                     onClick={() => void review("REJECT")}
                   >
                     {t("Request correction")}

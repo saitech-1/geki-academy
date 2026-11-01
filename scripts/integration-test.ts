@@ -181,7 +181,10 @@ assert.equal(
   403,
 );
 checks.push("course purchase enforced before playback");
-assert.equal((await call("/me/playback/"+lesson.id,admin,"POST",{},key)).status,403);
+assert.equal(
+  (await call("/me/playback/" + lesson.id, admin, "POST", {}, key)).status,
+  403,
+);
 checks.push("Super Admin learner playback also requires a course purchase");
 await db.membership.create({
   data: {
@@ -374,6 +377,22 @@ progress = await db.progress.findUniqueOrThrow({
   where: { userId_videoId: { userId: me.id, videoId: video.id } },
 });
 assert.ok(progress.completedAt);
+const ownedLibrary = await call("/me/course-library?scope=owned", student);
+assert.equal(ownedLibrary.status, 200);
+assert.equal(
+  ownedLibrary.data.find((c: any) => c.id === course.id).learning.percent,
+  100,
+);
+assert.equal(
+  ownedLibrary.data.some((c: any) => c.id === courseB.id),
+  false,
+);
+assert.equal(
+  (await call("/me/course-library?scope=owned", student)).data.find(
+    (c: any) => c.id === course.id,
+  ).learning.status,
+  "COMPLETED",
+);
 checks.push(
   "credible watched coverage and resume position persist in PostgreSQL",
 );

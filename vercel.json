@@ -1,4 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "installCommand": "npm ci --include=dev"
+  "installCommand": "npm ci --include=dev",
+  "crons": [{ "path": "/api/internal/payment-emails", "schedule": "0 2 * * *" }]
 }

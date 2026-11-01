@@ -20,6 +20,7 @@ import {
 import { Button, Empty, Loading } from "./ui";
 import { useAuth } from "./providers";
 import { AdminPaymentReviews } from "./qr-payments";
+import { AcademyLibrary } from "./academy-library";
 export function Experience({ route }: { route: string }) {
   if (route === "/") return <Home />;
   if (
@@ -52,10 +53,16 @@ export function Experience({ route }: { route: string }) {
     );
   if (route.startsWith("/checkout/"))
     return <CourseCheckout slug={route.split("/")[2]!} />;
-  if (route === "/dashboard" || route === "/my-learning")
+  if (route === "/my-learning" || route === "/academy/courses")
     return (
       <AppShell route={route}>
-        <DashboardPage learningOnly={route === "/my-learning"} />
+        <AcademyLibrary catalog={route === "/academy/courses"} />
+      </AppShell>
+    );
+  if (route === "/dashboard")
+    return (
+      <AppShell route={route}>
+        <DashboardPage />
       </AppShell>
     );
   if (

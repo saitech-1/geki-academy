@@ -60,6 +60,10 @@ For a local real-Firebase build, keep configuration in ignored root `.env.produc
 
 ## Learning and commerce
 
+The Academy catalog (`/academy/courses`) shows all published courses with the signed-in learner's access state. My Course Library (`/my-learning`) shows active purchases with persisted progress and resume links. Purchase/payment history remains at `/purchases`; public discovery stays at `/courses`.
+
+Submission, approval and rejection queue separate admin/student templates through Resend. Testing mode routes every template to the admin inbox and labels its intended recipient. See [email setup and retries](docs/PAYMENT_EMAILS.md) and the [library and notification report](docs/COURSE_LIBRARY_AND_EMAILS.md). Credentials stay server-only; development fixtures never send real mail by default.
+
 Courses are one-time purchases with ongoing access. A purchase unlocks only that course; historical memberships grant no access. The first explicitly marked preview can be public. Every learner, including administrators using the learner player, needs a purchase for paid footage. Private administrator source previews remain separate.
 
 The Kihon course is 50,000 MMK. The first 50 paying Kihon learners receive 30% off (35,000 MMK). Checkout reserves an available founding place for 24 hours; submitted payments retain their quote until reviewed. Course-row locking prevents concurrent checkouts from overselling the offer. KBZPay checkout displays the exact server-priced amount and the supplied QR, accepts only a receipt photo from the learner (no typed transaction ID), then requires manual review of the incoming transfer in KBZPay. The administrator records the actual incoming bank reference before approval to prevent the same transfer paying twice. A screenshot never unlocks a course automatically. Approval and purchase creation are atomic and idempotent; reused transaction IDs/evidence are rejected, self-review is forbidden, and access revocation is preserved. Admin → Payment Reviews handles submissions. Do not approve without verifying actual funds.
@@ -84,3 +88,7 @@ npm run test:ci
 The second command requires the isolated `geki_ci` PostgreSQL database, Firebase Auth Emulator and the environment used in GitHub Actions. It starts its own Next.js server on port 3000 and refuses hosted databases. See [CI/CD](docs/ci-cd.md), [implementation status](IMPLEMENTATION_STATUS.md), [plan](PLAN.md) and [protected streaming](PROTECTED_STREAMING.md).
 
 Protect main and require the GitHub Release gate in Vercel Deployment Checks. A passing workflow alone does not configure those account settings or make private cloud uploads production-ready.
+
+## Payment push notifications
+
+Admins can opt in to new-payment alerts, and students can opt in to approval alerts, including background notifications. Setup, platform support, migration and test details: [Push notifications](docs/PUSH_NOTIFICATIONS.md).

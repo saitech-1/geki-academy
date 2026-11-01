@@ -1,5 +1,5 @@
 -- The browser never queries application records through the Supabase Data API.
--- Firebase identity is verified in Express; Prisma uses a server-only DB connection.
+-- Firebase identity is verified in Next.js; Prisma uses a server-only DB connection.
 -- Apply to both local PostgreSQL and Supabase after Prisma schema migrations.
 DO $$
 DECLARE application_table record;
