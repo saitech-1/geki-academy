@@ -65,6 +65,11 @@ jobs:
       DATABASE_URL: postgresql://geki:geki_ci_only@127.0.0.1:5433/geki_ci
       FIREBASE_PROJECT_ID: demo-geki-academy
       FIREBASE_AUTH_EMULATOR_HOST: 127.0.0.1:9099
+      NEXT_PUBLIC_FIREBASE_API_KEY: ci-public-placeholder
+      NEXT_PUBLIC_FIREBASE_PROJECT_ID: demo-geki-academy
+      NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: demo-geki-academy.firebaseapp.com
+      NEXT_PUBLIC_FIREBASE_APP_ID: demo-geki-web
+      NEXT_PUBLIC_AUTH_EMULATOR_URL: http://127.0.0.1:9099
       MEDIA_MODE: local
       UPLOAD_DIR: .local/ci-uploads
       HOST: 127.0.0.1

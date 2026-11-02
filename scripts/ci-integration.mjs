@@ -14,6 +14,25 @@ assert.equal(
 );
 assert.equal(process.env.FIREBASE_PROJECT_ID, "demo-geki-academy");
 assert.equal(process.env.FIREBASE_AUTH_EMULATOR_HOST, "127.0.0.1:9099");
+assert.ok(
+  process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+  "CI browser Firebase API key is missing",
+);
+assert.equal(
+  process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+  "demo-geki-academy",
+  "CI browser and server must use the same demo Firebase project",
+);
+assert.equal(
+  process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+  "demo-geki-academy.firebaseapp.com",
+);
+assert.equal(process.env.NEXT_PUBLIC_FIREBASE_APP_ID, "demo-geki-web");
+assert.equal(
+  process.env.NEXT_PUBLIC_AUTH_EMULATOR_URL,
+  "http://127.0.0.1:9099",
+  "CI browser must connect to the local Auth Emulator",
+);
 assert.equal(process.env.NODE_ENV, "test");
 assert.equal(process.env.MEDIA_MODE, "local");
 assert.equal(process.env.UPLOAD_DIR, ".local/ci-uploads");
@@ -114,8 +133,8 @@ try {
   await finished(start("scripts/push-browser.cjs"));
   await finished(start("scripts/integration-test.ts"));
   await finished(start("scripts/qr-payments-test.ts"));
-  await finished(start("scripts/payment-ui-browser.cjs"));
   await finished(start("scripts/prepare-academy-library.ts"));
+  await finished(start("scripts/payment-ui-browser.cjs"));
   await finished(start("scripts/academy-library-browser.cjs"));
 } finally {
   if (api.exitCode === null) {

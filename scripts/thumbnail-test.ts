@@ -48,9 +48,15 @@ try {
   browser = await chromium.launch({
     ...(process.env.CI ? {} : { channel: "chrome" }),
     headless: true,
+    args: [
+      "--disable-gpu",
+      "--renderer-process-limit=1",
+      "--js-flags=--max-old-space-size=160",
+    ],
   });
   const page = await browser.newPage({
     viewport: { width: 1280, height: 850 },
+    reducedMotion: "reduce",
   });
   const errors: string[] = [];
   page.on("pageerror", (e) => errors.push(e.message));
@@ -90,9 +96,6 @@ try {
     uploaded,
   );
   await page.setViewportSize({ width: 390, height: 844 });
-  await page
-    .locator(".thumbnail-upload")
-    .screenshot({ path: ".local/course-thumbnail-mobile.png" });
   assert.equal(
     await page.evaluate(
       () => document.documentElement.scrollWidth > innerWidth,

@@ -31,3 +31,15 @@ Run npm run build:verified. Integration tests require a loopback database named 
 Reference: https://vercel.com/docs/deployment-checks
 
 Run `npm run build:verified && npm run test:preview` locally to check the optimized production build. `npm run test:hydration` targets an already running loopback server on port 3000. Production preview checks require port 3005 to be free and stop their own server afterward. Screenshots are saved under ignored `.local/production-preview/`.
+
+## Browser Firebase configuration in integration CI
+
+The integration job must configure both Firebase Admin and the browser SDK. `FIREBASE_AUTH_EMULATOR_HOST` only configures the server; it does not connect browser sign-in to the emulator.
+
+The workflow supplies public fixture values for `NEXT_PUBLIC_FIREBASE_API_KEY`, `NEXT_PUBLIC_FIREBASE_PROJECT_ID`, `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`, `NEXT_PUBLIC_FIREBASE_APP_ID`, and `NEXT_PUBLIC_AUTH_EMULATOR_URL=http://127.0.0.1:9099`. Both SDKs must use `demo-geki-academy`. The integration runner checks these before creating fixtures or launching Next.js, so missing browser configuration produces an explicit error rather than a 30-second UI timeout. These values are test configuration, not production credentials.
+
+`RESEND_429` log entries inside the payment email integration test are intentional injected failures. The following “Email integration passed” line confirms retry/failure behavior passed.
+
+The shared Academy fixtures are prepared before payment UI checks so a clean database contains a submitted payment to review. Thumbnail screenshots use reduced motion and a bounded Chromium renderer to avoid animation waits and excessive local memory use.
+
+Validation on November 2, 2026: the integration runner completed with exit code 0 against isolated local `geki_ci`, Auth Emulator and explicit browser fixture configuration, using Chrome on Windows. Missing browser configuration also failed immediately as intended. The actual GitHub/Linux rerun remains pending publication of the workflow fix.
