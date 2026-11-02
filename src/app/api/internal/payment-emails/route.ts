@@ -18,9 +18,13 @@ export async function GET(request: Request) {
     const { db } = await import("@/server/db");
     const { deliverPaymentEmails } = await import("@/server/payment-email");
     const { deliverPushMessages } = await import("@/server/push");
+    const { cleanupVideoUploads } = await import(
+      "@/server/video-upload-sessions"
+    );
     const [email, push] = await Promise.all([
       deliverPaymentEmails(db, { limit: 5 }),
       deliverPushMessages(db, { limit: 5 }),
+      cleanupVideoUploads(db),
     ]);
     return Response.json({ email, push });
   } catch {

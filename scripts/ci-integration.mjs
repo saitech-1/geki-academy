@@ -109,6 +109,8 @@ try {
   await finished(start("scripts/device-entry-test.ts"));
   await finished(start("scripts/notifications-read-test.ts"));
   await finished(start("scripts/thumbnail-test.ts"));
+  await finished(start("scripts/video-upload-test.ts"));
+  await finished(start("scripts/video-upload-browser.ts"));
   await finished(start("scripts/push-browser.cjs"));
   await finished(start("scripts/integration-test.ts"));
   await finished(start("scripts/qr-payments-test.ts"));

@@ -8,6 +8,7 @@ import { config } from "./config";
 import { requireCondition } from "./domain";
 import { sendLocalMedia } from "./media";
 import { ReasonInput } from "@geki/contracts";
+import { checkVideoUpload } from "./video-upload-sessions";
 import {
   createProtectedUpload,
   transferProtectedSource,
@@ -28,6 +29,11 @@ adminContent.get("/streaming", (_req, res) => {
   });
 });
 adminContent.get("/videos/:id/protection", async (req, res) => {
+  const upload = await db.job.findUnique({
+    where: { id: `video-upload:${recordId(req)}` },
+  });
+  if (upload && ["UPLOADING", "PROCESSING"].includes(upload.status))
+    await checkVideoUpload(db, recordId(req));
   const video = await db.video.findUnique({ where: { id: recordId(req) } });
   requireCondition(video, 404, "NOT_FOUND", "Video not found.");
   requireCondition(

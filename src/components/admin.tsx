@@ -1,6 +1,12 @@
 "use client";
 import { useLocale } from "./locale";
-import { useState, useEffect, type FormEvent, type ReactNode } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  type FormEvent,
+  type ReactNode,
+} from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Course, Video, Student, Question } from "@/lib/types";
@@ -8,6 +14,7 @@ import { api, json, uploadVideo, videoDuration } from "@/lib/api";
 import { useAuth, useData } from "./providers";
 import { ProtectedUpload } from "./protected-upload";
 import { ThumbnailUpload } from "./thumbnail-upload";
+import { VideoUploadStatus } from "./video-upload-status";
 import {
   Heading,
   Button,
@@ -851,6 +858,8 @@ export function AdminVideos() {
   const [deleting, setDeleting] = useState<Video | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
   const [uploadPercent, setUploadPercent] = useState<number | null>(null);
+  const uploadController = useRef<AbortController | null>(null);
+  const [uploadFile, setUploadFile] = useState<File | null>(null);
   const [draftFile, setDraftFile] = useState<File | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
   const [draftDuration, setDraftDuration] = useState("");
@@ -865,9 +874,15 @@ export function AdminVideos() {
       if (current) setSelected(current);
     }
   }, [data, selected?.id]);
-  useEffect(() => setPreview(null), [selected?.id]);
+  useEffect(() => {
+    setPreview(null);
+    if (!uploadController.current) setUploadFile(null);
+  }, [selected?.id]);
   async function createVideo(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (uploadController.current) return;
+    const controller = new AbortController();
+    uploadController.current = controller;
     const f = new FormData(e.currentTarget);
     setBusy(true);
     setFailure("");
@@ -884,16 +899,22 @@ export function AdminVideos() {
       setCreate(false);
       setSelected({ ...v, subtitles: [] });
       if (draftFile) {
+        setUploadFile(draftFile);
         setUploadPercent(0);
         v = await uploadVideo<Video>(
           "/admin/videos/" + v.id + "/upload",
           draftFile,
           setUploadPercent,
           Number(draftDuration),
+          controller.signal,
         );
         setSelected(v);
         setMessage(
-          "Source uploaded. Preview it, then review your subtitle tracks.",
+          v.status === "PROCESSING"
+            ? "File transferred. Provider verification and protected encoding are in progress."
+            : v.providerAssetId
+              ? "Protected video ready. Review and sync both subtitle tracks before publishing."
+              : "Source uploaded. Preview it, then review your subtitle tracks.",
         );
       }
       reload();
@@ -901,12 +922,16 @@ export function AdminVideos() {
       setFailure(e instanceof Error ? e.message : "Unable to create video.");
       reload();
     } finally {
+      uploadController.current = null;
       setBusy(false);
       setUploadPercent(null);
     }
   }
   async function upload(file: File) {
-    if (!selected) return;
+    if (!selected || uploadController.current) return;
+    const controller = new AbortController();
+    uploadController.current = controller;
+    setUploadFile(file);
     setBusy(true);
     setFailure("");
     setUploadPercent(0);
@@ -918,13 +943,26 @@ export function AdminVideos() {
         file,
         setUploadPercent,
         duration,
+        controller.signal,
       );
       setSelected(updated);
-      setMessage("Video uploaded. Add and approve both subtitle tracks.");
+      setMessage(
+        updated.status === "PROCESSING"
+          ? "File transferred. Provider verification and protected encoding are in progress."
+          : updated.providerAssetId
+            ? "Protected video ready. Review and sync both subtitle tracks before publishing."
+            : "Video uploaded. Add and approve both subtitle tracks.",
+      );
       reload();
     } catch (e) {
-      setFailure(e instanceof Error ? e.message : "Upload failed.");
+      if (controller.signal.aborted)
+        setMessage(
+          "Upload cancelled. Any unused provider asset will be cleaned up.",
+        );
+      else setFailure(e instanceof Error ? e.message : "Upload failed.");
+      reload();
     } finally {
+      uploadController.current = null;
       setBusy(false);
       setUploadPercent(null);
     }
@@ -1083,7 +1121,7 @@ export function AdminVideos() {
             </label>
             <label>
               DRM provider asset ID (optional)
-              <input name="assetId" />
+              <input name="assetId" disabled={Boolean(draftFile)} />
             </label>
             <small>
               Upload a private source file now, or create a record for an
@@ -1165,7 +1203,11 @@ export function AdminVideos() {
                   />
                 </label>
               </div>
-              <Button type="submit" disabled={busy} secondary>
+              <Button
+                type="submit"
+                disabled={busy || selected.status === "PROCESSING"}
+                secondary
+              >
                 Save video details
               </Button>
             </form>
@@ -1176,6 +1218,11 @@ export function AdminVideos() {
                 {selected._count?.progress || 0} learning records
               </small>
             </div>
+            <VideoUploadStatus
+              videoId={selected.id}
+              onChange={reload}
+              active={selected.status === "PROCESSING"}
+            />
             <label className="upload-zone">
               {selected.localPath
                 ? "Replace source file"
@@ -1183,7 +1230,11 @@ export function AdminVideos() {
               <input
                 type="file"
                 accept=".mp4,.webm,video/mp4,video/webm"
-                disabled={busy}
+                disabled={
+                  busy ||
+                  Boolean(selected.providerAssetId) ||
+                  selected.status === "PUBLISHED"
+                }
                 onChange={(e) => {
                   const file = e.target.files?.[0];
                   if (file) void upload(file);
@@ -1193,17 +1244,38 @@ export function AdminVideos() {
             {uploadPercent !== null ? (
               <div role="status">
                 <p>Uploading source · {uploadPercent}%</p>
+                <small>
+                  {uploadFile?.name}{" "}
+                  {uploadFile
+                    ? `· ${(uploadFile.size / 1024 / 1024).toFixed(1)} MB`
+                    : ""}
+                </small>
                 <progress
                   className="upload-progress"
                   max={100}
                   value={uploadPercent}
                 />
+                <Button
+                  secondary
+                  onClick={() => uploadController.current?.abort()}
+                >
+                  Cancel upload
+                </Button>
               </div>
             ) : null}
+            {!busy &&
+              uploadFile &&
+              (Boolean(failure) ||
+                (selected.status !== "PROCESSING" &&
+                  !selected.providerAssetId)) && (
+                <Button secondary onClick={() => void upload(uploadFile)}>
+                  Retry selected file
+                </Button>
+              )}
             <small>
-              Your source upload is private and can be previewed by admins. Paid
-              student streaming still requires configured protection. Replacing
-              footage resets subtitle approval.
+              Direct uploads are encoded for protected playback. Local sources
+              can be previewed by admins. Subtitle review and explicit
+              publishing are still required.
             </small>
             {selected.localPath ? (
               <Button

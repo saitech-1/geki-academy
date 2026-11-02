@@ -33,6 +33,7 @@ import { qrCheckout, learnerPayments, adminPayments } from "./qr-payments";
 import { academyCourses } from "./course-library";
 import { pushEndpoints } from "./push";
 import { thumbnailUploads, thumbnailPublic } from "./course-thumbnails";
+import { directVideoUploads, checkVideoUpload } from "./video-upload-sessions";
 const app = createEndpoints();
 app.use(
   "/api",
@@ -776,6 +777,7 @@ app.post("/api/me/quizzes/:id/attempts", async (req, res) => {
 app.use("/api/admin-media", adminSourceMedia);
 app.use("/api/admin", auth, admin, accountLimit, adminContent);
 app.use("/api/admin", thumbnailUploads);
+app.use("/api/admin", directVideoUploads);
 app.get("/api/admin/overview", async (_req, res) => {
   const [students, activePurchasers, videos, courses, queue] =
     await Promise.all([
@@ -1113,6 +1115,11 @@ app.put("/api/admin/videos/:id/subtitles/:language", async (req, res) => {
 });
 app.post("/api/admin/videos/:id/publish", async (req, res) => {
   const { reason } = ReasonInput.parse(req.body);
+  const upload = await db.job.findUnique({
+    where: { id: `video-upload:${id(req)}` },
+  });
+  if (upload && ["UPLOADING", "PROCESSING"].includes(upload.status))
+    await checkVideoUpload(db, id(req));
   requireCondition(
     config.mediaMode === "local" ||
       (config.mediaMode === "vdocipher" && config.videoSecret),
