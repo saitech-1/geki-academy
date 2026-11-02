@@ -107,5 +107,7 @@ jobs:
           VERIFY_RESULT: ${{ needs.verify.result }}
           INTEGRATION_RESULT: ${{ needs.integration.result }}
         run: |
+          echo "Build/unit/preview checks: $VERIFY_RESULT"
+          echo "Integration checks: $INTEGRATION_RESULT"
           test "$VERIFY_RESULT" = success
           test "$INTEGRATION_RESULT" = success

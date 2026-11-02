@@ -3,7 +3,9 @@ const { chromium } = require("playwright");
 (async () => {
   const root = "http://127.0.0.1:3000";
   const browser = await chromium.launch({
-    ...(process.env.CI ? {} : { channel: "chrome" }),
+    // Persistent notification APIs need the full browser's new headless mode,
+    // matching local Chrome rather than Playwright's separate headless shell.
+    channel: process.env.CI ? "chromium" : "chrome",
     headless: true,
   });
   try {
@@ -39,6 +41,24 @@ const { chromium } = require("playwright");
     for (let i = 0; !registrationId && i < 30; i++)
       await page.waitForTimeout(100);
     assert.ok(registrationId);
+    const worker = context
+      .serviceWorkers()
+      .find((w) => new URL(w.url()).pathname === "/geki-sw.js");
+    assert.ok(worker, "GEKI notification worker must be running");
+    // Observe the real push handler's waitUntil promise in this isolated test.
+    // CDP delivery acknowledgment does not mean asynchronous push work finished.
+    await worker.evaluate(() => {
+      const original = ExtendableEvent.prototype.waitUntil;
+      ExtendableEvent.prototype.waitUntil = function (promise) {
+        const result = original.call(this, promise);
+        if (this.type === "push")
+          Promise.resolve(promise).then(
+            () => globalThis.__gekiPushResolve?.(),
+            (error) => globalThis.__gekiPushReject?.(error),
+          );
+        return result;
+      };
+    });
     await page.goto("about:blank");
     const message = {
       notificationId: "fixture-1",
@@ -47,26 +67,48 @@ const { chromium } = require("playwright");
       body: "Payment approved.",
       href: "/my-learning",
     };
-    const deliver = (data) =>
-      session.send("ServiceWorker.deliverPushMessage", {
+    const deliver = async (data) => {
+      await worker.evaluate(() => {
+        globalThis.__gekiPushDone = new Promise((resolve, reject) => {
+          globalThis.__gekiPushResolve = resolve;
+          globalThis.__gekiPushReject = reject;
+        });
+      });
+      await session.send("ServiceWorker.deliverPushMessage", {
         origin: root,
         registrationId,
         data: JSON.stringify(data),
       });
+      await worker.evaluate(async () => {
+        let timer;
+        try {
+          await Promise.race([
+            globalThis.__gekiPushDone,
+            new Promise((_, reject) => {
+              timer = setTimeout(
+                () =>
+                  reject(
+                    Error("GEKI push handler did not finish within 10 seconds"),
+                  ),
+                10000,
+              );
+            }),
+          ]);
+        } finally {
+          clearTimeout(timer);
+        }
+      });
+    };
     await deliver(message);
-    await page.goto(root + "/signin");
     const notifications = () =>
-      page.evaluate(async () =>
-        (await (await navigator.serviceWorker.ready).getNotifications()).map(
-          (n) => ({ title: n.title, tag: n.tag, href: n.data.href }),
-        ),
+      worker.evaluate(async () =>
+        (await self.registration.getNotifications()).map((n) => ({
+          title: n.title,
+          tag: n.tag,
+          href: n.data.href,
+        })),
       );
-    let found;
-    for (let i = 0; i < 30; i++) {
-      found = await notifications();
-      if (found.length) break;
-      await page.waitForTimeout(100);
-    }
+    const found = await notifications();
     assert.equal(found.length, 1);
     assert.equal(found[0].href, "/my-learning");
     await deliver(message);
@@ -75,12 +117,12 @@ const { chromium } = require("playwright");
       notificationId: "wrong-owner",
       userId: "other-account",
     });
-    await page.waitForTimeout(300);
     assert.equal(
       (await notifications()).length,
       1,
       "Duplicates and other accounts must not display",
     );
+    await page.goto(root + "/signin");
     await page.evaluate(async () => {
       const registration = await navigator.serviceWorker.ready;
       await new Promise((resolve) => {
@@ -97,8 +139,8 @@ const { chromium } = require("playwright");
       0,
       "Sign-out must clear displayed alerts",
     );
+    await page.goto("about:blank");
     await deliver({ ...message, notificationId: "after-logout" });
-    await page.waitForTimeout(300);
     assert.equal(
       (await notifications()).length,
       0,
